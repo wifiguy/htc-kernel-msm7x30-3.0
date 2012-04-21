@@ -25,8 +25,12 @@
 #include <linux/leds.h>
 #include <linux/mfd/marimba.h>
 #include <linux/i2c.h>
-#include <linux/bma250.h>
-#include <linux/cm3629.h>
+//#include <linux/bma250.h>
+//#include <linux/cm3629.h>
+#include <linux/bma150.h>
+#include <linux/akm8975.h>
+#include <linux/capella_cm3602.h>
+#include <linux/cm3628.h>
 #include <linux/lightsensor.h>
 #include <linux/input.h>
 #include <linux/atmel_qt602240.h>
@@ -101,7 +105,8 @@
 #include <mach/sdio_al.h>
 #include "smd_private.h"
 #include "board-saga.h"
-#include <mach/tpa2051d3.h>
+//#include <mach/tpa2051d3.h>
+
 #include "board-msm7x30-regulator.h"
 #include <mach/board_htc.h>
 
@@ -116,12 +121,12 @@
 #define GPIO_2MA       0
 #define PMIC_VREG_WLAN_LEVEL	2900
 
-#define ADV7520_I2C_ADDR	0x39
+//#define ADV7520_I2C_ADDR	0x39
 
-#define FPGA_SDCC_STATUS       0x8E0001A8
+//#define FPGA_SDCC_STATUS       0x8E0001A8
 
-#define FPGA_OPTNAV_GPIO_ADDR	0x8E000026
-#define OPTNAV_I2C_SLAVE_ADDR	(0xB0 >> 1)
+//#define FPGA_OPTNAV_GPIO_ADDR	0x8E000026
+//#define OPTNAV_I2C_SLAVE_ADDR	(0xB0 >> 1)
 
 /* Macros assume PMIC GPIOs start at 0 */
 #define PM8058_GPIO_PM_TO_SYS(pm_gpio)     (pm_gpio + NR_GPIO_IRQS)
@@ -129,11 +134,11 @@
 #define PM8058_MPP_BASE			   PM8058_GPIO_PM_TO_SYS(PM8058_GPIOS)
 #define PM8058_MPP_PM_TO_SYS(pm_gpio)	   (pm_gpio + PM8058_MPP_BASE)
 
-#if 0
-#define PMIC_GPIO_WLAN_EXT_POR  22 /* PMIC GPIO 23 is volume up GPIO */
-#define BMA150_GPIO_INT 1
-#define HAP_LVL_SHFT_MSM_GPIO 24
-#endif
+//#if 0
+//#define PMIC_GPIO_WLAN_EXT_POR  22 /* PMIC GPIO 23 is volume up GPIO */
+//#define BMA150_GPIO_INT 1
+//#define HAP_LVL_SHFT_MSM_GPIO 24
+//#endif
 
 int htc_get_usb_accessory_adc_level(uint32_t *buffer);
 #include <mach/cable_detect.h>
@@ -185,6 +190,8 @@ static int saga_ts_power(int on)
 	pr_info("%s: power %d\n", __func__, on);
 
 	if (on == 1) {
+		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_LED_3V3_EN), 1);
+		msleep(5);
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_TP_RSTz), 1);
 	} else if (on == 2) {
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_TP_RSTz), 0);
@@ -198,872 +205,66 @@ static int saga_ts_power(int on)
 
 struct atmel_i2c_platform_data saga_ts_atmel_data[] = {
 	{
-		.version = 0x0011,
-		.build = 0xAA,
-		.source = 1, /* ALPS */
-		.abs_x_min = 0,
-		.abs_x_max = 479,
-		.abs_y_min = 0,
-		.abs_y_max = 948,
+		.version = 0x0020,
+		.abs_x_min = 1,
+		.abs_x_max = 1023,
+		.abs_y_min = 2,
+		.abs_y_max = 966,
 		.abs_pressure_min = 0,
 		.abs_pressure_max = 255,
 		.abs_width_min = 0,
 		.abs_width_max = 20,
 		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.power = saga_ts_power,
-		.unlock_attr = 1,
+		.power = saga_ts_atmel_power,
 		.config_T6 = {0, 0, 0, 0, 0, 0},
-		.config_T7 = {15, 10, 50},
-		.config_T8 = {30, 0, 5, 5, 0, 64, 2, 30, 16, 192},
-		.config_T9 = {139, 0, 0, 19, 11, 0, 16, 45, 2, 1, 0, 5, 2, 0, 5, 20, 17, 15, 0, 0, 223, 1, 5, 0, 50, 50, 148, 40, 143, 35, 18, 15, 58, 59, 0},
-		.config_T15 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T7 = {50, 15, 25},
+		.config_T8 = {8, 0, 5, 5, 0, 0, 5, 40, 5, 192},
+		.config_T9 = {139, 0, 0, 18, 12, 0, 16, 40, 3, 7, 10, 10, 5, 15, 4, 10, 20, 0, 0, 0, 0, 0, 8, 0, 0, 0, 164, 40, 0, 0, 40, 12},
+		.config_T15 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		.config_T18 = {0, 0},
-		.config_T19 = {3, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T19 = {0, 0, 52, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T20 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T22 = {15, 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 7, 18, 255, 255, 0},
 		.config_T23 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T25 = {3, 0, 96, 109, 216, 89, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T40 = {0, 0, 0, 0, 0},
-		.config_T42 = {0, 50, 20, 20, 250, 3, 0, 5},
-		.config_T46 = {0, 3, 16, 16, 0, 0, 0, 0, 0},
-		.config_T47 = {0, 20, 50, 5, 2, 50, 40, 0, 0, 63},
-		.config_T48 = {15, 0, 66, 8, 0, 0, 0, 0, 18, 30, 0, 10, 0, 6, 6, 0, 0, 100, 4, 64, 10, 0, 20, 5, 0, 38, 0, 20, 0, 1, 15, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T55 = {0, 0, 0, 0},
-		.config_T58 = {114, 35, 3, 0, 50, 0, 0, 0, 0, 0, 0},
-		.object_crc = {0x57, 0x79, 0xB9},
-		.cable_config = {60, 30, 16, 16, 0, 0},
-		.mferr_config = {85, 60, 16, 32, 0, 0, 3, 2, 0, 0, 0, 0, 0},
-		.filter_level = {6, 18, 462, 474},
+		.config_T24 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T25 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T28 = {0, 0, 2, 8, 16, 60},
+		.object_crc = {0x77, 0xA1, 0x0A},
+		.cable_config = {40, 20, 8, 16},
+		.cal_tchthr = {45, 45},
+		.GCAF_level = {20, 24, 28, 40, 63},
+		.filter_level = {30, 60, 963, 993},
 	},
 	{
-		.version = 0x0011,
-		.build = 0xAA,
-		.source = 0, /* J-Touch */
-		.abs_x_min = 0,
-		.abs_x_max = 479,
-		.abs_y_min = 0,
-		.abs_y_max = 948,
+		.version = 0x016,
+		.abs_x_min = 1,
+		.abs_x_max = 1023,
+		.abs_y_min = 2,
+		.abs_y_max = 966,
 		.abs_pressure_min = 0,
 		.abs_pressure_max = 255,
 		.abs_width_min = 0,
 		.abs_width_max = 20,
 		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.power = saga_ts_power,
-		.unlock_attr = 1,
+		.power = saga_ts_atmel_power,
 		.config_T6 = {0, 0, 0, 0, 0, 0},
-		.config_T7 = {15, 10, 50},
-		.config_T8 = {30, 0, 5, 5, 0, 64, 2, 30, 16, 192},
-		.config_T9 = {139, 0, 0, 19, 11, 0, 16, 45, 2, 1, 0, 5, 2, 0, 5, 20, 17, 15, 0, 0, 223, 1, 0, 0, 45, 45, 143, 50, 140, 25, 18, 15, 58, 59, 0},
-		.config_T15 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T7 = {50, 15, 25},
+		.config_T8 = {8, 0, 5, 5, 0, 0, 5, 40},
+		.config_T9 = {139, 0, 0, 18, 12, 0, 16, 40, 3, 7, 10, 10, 5, 15, 4, 10, 20, 0, 0, 0, 0, 0, 8, 0, 0, 0, 164, 40, 0, 0, 40},
+		.config_T15 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		.config_T18 = {0, 0},
-		.config_T19 = {3, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T19 = {0, 0, 52, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T20 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T22 = {15, 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 7, 18, 255, 255, 0},
 		.config_T23 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T25 = {3, 0, 96, 109, 216, 89, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T40 = {0, 0, 0, 0, 0},
-		.config_T42 = {0, 50, 20, 20, 250, 3, 0, 5},
-		.config_T46 = {0, 3, 16, 16, 0, 0, 0, 0, 0},
-		.config_T47 = {0, 20, 50, 5, 2, 50, 40, 0, 0, 63},
-		.config_T48 = {15, 0, 66, 8, 0, 0, 0, 0, 18, 30, 0, 20, 0, 6, 6, 0, 0, 100, 4, 64, 10, 0, 20, 5, 0, 38, 0, 20, 0, 1, 15, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T55 = {0, 0, 0, 0},
-		.config_T58 = {114, 35, 3, 0, 50, 0, 0, 0, 0, 0, 0},
-		.object_crc = {0x73, 0x1C, 0x4E},
-		.cable_config = {60, 30, 16, 16, 0, 0},
-		.mferr_config = {85, 60, 16, 32, 0, 0, 3, 2, 0, 0, 0, 0, 0},
-		.filter_level = {6, 18, 462, 474},
+		.config_T24 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T25 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		.config_T27 = {0, 0, 0, 0, 0, 0, 0},
+		.config_T28 = {0, 0, 2, 8, 16, 60},
+		.cable_config = {35, 20, 8, 16},
+		.GCAF_level = {20, 24, 28, 40, 63},
+		.filter_level = {30, 60, 963, 993},
 	},
-	{
-		.version = 0x0011,
-		.build = 0xF8,
-		.source = 1, /* ALPS */
-		.abs_x_min = 0,
-		.abs_x_max = 479,
-		.abs_y_min = 0,
-		.abs_y_max = 948,
-		.abs_pressure_min = 0,
-		.abs_pressure_max = 255,
-		.abs_width_min = 0,
-		.abs_width_max = 20,
-		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.power = saga_ts_power,
-		.unlock_attr = 1,
-		.config_T6 = {0, 0, 0, 0, 0, 0},
-		.config_T7 = {15, 10, 50},
-		.config_T8 = {30, 0, 5, 5, 0, 64, 2, 30, 16, 192},
-		.config_T9 = {139, 0, 0, 19, 11, 0, 16, 45, 2, 1, 0, 5, 2, 0, 5, 20, 17, 15, 0, 0, 223, 1, 5, 0, 50, 50, 148, 40, 143, 35, 18, 15, 58, 59, 0},
-		.config_T15 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T18 = {0, 0},
-		.config_T19 = {3, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T23 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T25 = {3, 0, 96, 109, 216, 89, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T40 = {0, 0, 0, 0, 0},
-		.config_T42 = {0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T46 = {0, 3, 16, 16, 0, 0, 0, 0, 0},
-		.config_T47 = {0, 20, 50, 5, 2, 50, 40, 0, 0, 63},
-		.config_T48 = {15, 0, 66, 8, 0, 0, 0, 0, 18, 30, 0, 10, 0, 6, 6, 0, 0, 100, 4, 64, 10, 0, 20, 5, 0, 38, 0, 20, 0, 1, 15, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.object_crc = {0xDD, 0x54, 0x94},
-		.cable_config = {60, 30, 16, 16, 0, 0},
-		.noiseLine_config = {85, 60, 16, 32, 0, 0, 5, 1},
-		.filter_level = {6, 18, 462, 474},
-	},
-	{
-		.version = 0x0011,
-		.build = 0xF8,
-		.source = 0, /* J-Touch */
-		.abs_x_min = 0,
-		.abs_x_max = 479,
-		.abs_y_min = 0,
-		.abs_y_max = 948,
-		.abs_pressure_min = 0,
-		.abs_pressure_max = 255,
-		.abs_width_min = 0,
-		.abs_width_max = 20,
-		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.power = saga_ts_power,
-		.unlock_attr = 1,
-		.config_T6 = {0, 0, 0, 0, 0, 0},
-		.config_T7 = {15, 10, 50},
-		.config_T8 = {30, 0, 5, 5, 0, 64, 2, 30, 16, 192},
-		.config_T9 = {139, 0, 0, 19, 11, 0, 16, 45, 2, 1, 0, 5, 2, 0, 5, 20, 17, 15, 0, 0, 223, 1, 0, 0, 45, 45, 143, 50, 140, 25, 18, 15, 58, 59, 0},
-		.config_T15 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T18 = {0, 0},
-		.config_T19 = {3, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T23 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T25 = {3, 0, 96, 109, 216, 89, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T40 = {0, 0, 0, 0, 0},
-		.config_T42 = {0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T46 = {0, 3, 16, 16, 0, 0, 0, 0, 0},
-		.config_T47 = {0, 20, 50, 5, 2, 50, 40, 0, 0, 63},
-		.config_T48 = {15, 0, 66, 8, 0, 0, 0, 0, 18, 30, 0, 10, 0, 6, 6, 0, 0, 100, 4, 64, 10, 0, 20, 5, 0, 38, 0, 20, 0, 1, 15, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.object_crc = {0x8C, 0xE8, 0x03},
-		.cable_config = {60, 30, 16, 16, 0, 0},
-		.noiseLine_config = {85, 60, 16, 32, 0, 0, 5, 1},
-		.filter_level = {6, 18, 462, 474},
-	},
-	{
-		.version = 0x0010,
-		.build = 0xAA,
-		.source = 1, /* ALPS */
-		.abs_x_min = 0,
-		.abs_x_max = 479,
-		.abs_y_min = 0,
-		.abs_y_max = 948,
-		.abs_pressure_min = 0,
-		.abs_pressure_max = 255,
-		.abs_width_min = 0,
-		.abs_width_max = 20,
-		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.power = saga_ts_power,
-		.unlock_attr = 1,
-		.config_T6 = {0, 0, 0, 0, 0, 0},
-		.config_T7 = {15, 8, 50},
-		.config_T8 = {30, 0, 5, 5, 0, 0, 5, 30, 5, 192},
-		.config_T9 = {139, 0, 0, 19, 11, 0, 16, 45, 3, 1, 0, 5, 2, 0, 5, 15, 15, 15, 0, 0, 223, 1, 5, 0, 50, 50, 148, 40, 143, 35, 18, 15, 58, 59, 0},
-		.config_T15 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T18 = {0, 0},
-		.config_T19 = {3, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T23 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T25 = {3, 0, 96, 109, 216, 89, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T40 = {0, 0, 0, 0, 0},
-		.config_T42 = {0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T46 = {0, 3, 8, 8, 0, 0, 0, 0, 0},
-		.config_T47 = {0, 20, 50, 5, 2, 50, 40, 0, 0, 63},
-		.config_T48 = {15, 68, 96, 0, 0, 0, 0, 0, 12, 12, 0, 0, 0, 6, 6, 0, 0, 100, 4, 64, 10, 0, 20, 5, 0, 38, 0, 20, 0, 0, 0, 0, 0, 0, 0, 35, 3, 5, 2, 0, 5, 10, 10, 239, 238, 35, 35, 143, 75, 138, 50, 18, 17, 4},
-		.object_crc = {0xF4, 0xBE, 0xC7},
-	},
-	{
-		.version = 0x0010,
-		.build = 0xAA,
-		.source = 0, /* J-Touch */
-		.abs_x_min = 0,
-		.abs_x_max = 479,
-		.abs_y_min = 0,
-		.abs_y_max = 948,
-		.abs_pressure_min = 0,
-		.abs_pressure_max = 255,
-		.abs_width_min = 0,
-		.abs_width_max = 20,
-		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.power = saga_ts_power,
-		.unlock_attr = 1,
-		.config_T6 = {0, 0, 0, 0, 0, 0},
-		.config_T7 = {15, 8, 50},
-		.config_T8 = {30, 0, 5, 5, 0, 0, 5, 30, 5, 192},
-		.config_T9 = {139, 0, 0, 19, 11, 0, 16, 45, 3, 1, 0, 5, 2, 0, 5, 15, 15, 15, 0, 0, 223, 1, 0, 0, 45, 45, 143, 50, 140, 25, 18, 15, 58, 59, 0},
-		.config_T15 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T18 = {0, 0},
-		.config_T19 = {3, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T23 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T25 = {3, 0, 96, 109, 216, 89, 0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T40 = {0, 0, 0, 0, 0},
-		.config_T42 = {0, 0, 0, 0, 0, 0, 0, 0},
-		.config_T46 = {0, 3, 8, 8, 0, 0, 0, 0, 0},
-		.config_T47 = {0, 20, 50, 5, 2, 50, 40, 0, 0, 63},
-		.config_T48 = {15, 68, 96, 0, 0, 0, 0, 0, 12, 12, 0, 0, 0, 6, 6, 0, 0, 100, 4, 64, 10, 0, 20, 5, 0, 38, 0, 20, 0, 0, 0, 0, 0, 0, 0, 35, 3, 5, 2, 0, 5, 10, 10, 239, 238, 35, 35, 143, 75, 138, 50, 18, 17, 4},
-		.object_crc = {0xB1, 0x91, 0x12},
-	},
-};
-
-static struct synaptics_i2c_rmi_platform_data saga_ts_synaptics_data[] = { /* Synatpics sensor */
-	{
-		.version = 0x3330,
-		.packrat_number = 1100754,
-		.abs_x_min = 0,
-		.abs_x_max = 1090,
-		.abs_y_min = 0,
-		.abs_y_max = 1750,
-		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.default_config = 3,
-		.large_obj_check = 1,
-		.customer_register = {0xF9, 0x64, 0x63, 0x32},
-		.config = {0x45, 0x30, 0x30, 0x43, 0x00, 0x3F, 0x03, 0x1E,
-			0x05, 0xB1, 0x88, 0x0B, 0x19, 0x19, 0x00, 0x00,
-			0x4C, 0x04, 0x6C, 0x07, 0x02, 0x14, 0x1E, 0x05,
-			0x32, 0x05, 0x11, 0x96, 0x02, 0x01, 0x3C, 0x23,
-			0x00, 0x23, 0x00, 0xB2, 0x49, 0x34, 0x48, 0xF8,
-			0xA7, 0xF8, 0xA7, 0x00, 0x50, 0x00, 0x00, 0x00,
-			0x00, 0x0A, 0x04, 0xC0, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x19, 0x01, 0x00, 0x0A, 0x40, 0x32,
-			0xA3, 0x03, 0x23, 0x07, 0x07, 0x6E, 0x0B, 0x13,
-			0x00, 0x02, 0xEE, 0x00, 0x80, 0x03, 0x0E, 0x1F,
-			0x10, 0x35, 0x00, 0x13, 0x04, 0x00, 0x00, 0x08,
-			0xFF, 0x01, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-			0x18, 0x19, 0x1A, 0x1B, 0x11, 0xFF, 0xFF, 0xFF,
-			0x12, 0x10, 0x0E, 0x0C, 0x06, 0x04, 0x02, 0x01,
-			0x08, 0x09, 0x0A, 0x0B, 0x0D, 0x0F, 0x11, 0x13,
-			0x07, 0x05, 0x03, 0xFF, 0xC0, 0xA0, 0xA0, 0xA0,
-			0xA0, 0xA0, 0xA8, 0xA8, 0x48, 0x46, 0x45, 0x43,
-			0x42, 0x41, 0x3F, 0x3D, 0x00, 0x02, 0x04, 0x06,
-			0x08, 0x0A, 0x0C, 0x0F, 0x00, 0xA0, 0x0F, 0xFD,
-			0x28, 0x00, 0x20, 0x4E, 0xB3, 0xC8, 0xCD, 0xA0,
-			0x0F, 0x00, 0xC0, 0x80, 0x00, 0x10, 0x00, 0x10,
-			0x00, 0x10, 0x00, 0x10, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x02, 0x02,
-			0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x20, 0x20,
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x55, 0x58,
-			0x5A, 0x5C, 0x5E, 0x60, 0x62, 0x65, 0x00, 0x28,
-			0x00, 0x10, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-	},
-	{
-		.version = 0x3330,
-		.packrat_number = 1092704,
-		.abs_x_min = 0,
-		.abs_x_max = 1090,
-		.abs_y_min = 0,
-		.abs_y_max = 1750,
-		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.default_config = 3,
-		.large_obj_check = 1,
-		.config = { 0x45, 0x30, 0x30, 0x39, 0x00, 0x3F, 0x03, 0x1E,
-			0x05, 0xB1, 0x88, 0x0B, 0x19, 0x19, 0x00, 0x00,
-			0x4C, 0x04, 0x6C, 0x07, 0x02, 0x14, 0x1E, 0x05,
-			0x32, 0x05, 0x11, 0x96, 0x02, 0x01, 0x3C, 0x23,
-			0x00, 0x23, 0x00, 0xB2, 0x49, 0x34, 0x48, 0x04,
-			0xB8, 0xDA, 0xB6, 0x00, 0x50, 0x00, 0x00, 0x00,
-			0x00, 0x0A, 0x04, 0xC0, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x19, 0x01, 0x00, 0x0A, 0x40, 0x32,
-			0xA3, 0x03, 0x23, 0x07, 0x07, 0x6E, 0x0B, 0x13,
-			0x00, 0x02, 0xEE, 0x00, 0x80, 0x03, 0x0E, 0x1F,
-			0x10, 0x35, 0x00, 0x13, 0x04, 0x00, 0x00, 0x08,
-			0xFF, 0x01, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-			0x18, 0x19, 0x1A, 0x1B, 0x11, 0xFF, 0xFF, 0xFF,
-			0x12, 0x10, 0x0E, 0x0C, 0x06, 0x04, 0x02, 0x01,
-			0x08, 0x09, 0x0A, 0x0B, 0x0D, 0x0F, 0x11, 0x13,
-			0x07, 0x05, 0x03, 0xFF, 0xC0, 0xA0, 0xA0, 0xA0,
-			0xA0, 0xA0, 0xA8, 0xA8, 0x48, 0x46, 0x45, 0x43,
-			0x42, 0x41, 0x3F, 0x3D, 0x00, 0x02, 0x04, 0x06,
-			0x08, 0x0A, 0x0C, 0x0F, 0x00, 0xA0, 0x0F, 0xFD,
-			0x28, 0x00, 0x20, 0x4E, 0xB3, 0xC8, 0xCD, 0xA0,
-			0x0F, 0x00, 0xC0, 0x80, 0x00, 0x10, 0x00, 0x10,
-			0x00, 0x10, 0x00, 0x10, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x02, 0x02,
-			0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x20, 0x20,
-			0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x55, 0x58,
-			0x5A, 0x5C, 0x5E, 0x60, 0x62, 0x65, 0x00, 0xC8,
-			0x00, 0x10, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-	},
-	{
-		.version = 0x3330,
-		.abs_x_min = 35,
-		.abs_x_max = 1090,
-		.abs_y_min = 0,
-		.abs_y_max = 1750,
-		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.default_config = 3,
-		.large_obj_check = 1,
-		.config = {0x30, 0x30, 0x33, 0x30, 0x00, 0x3F, 0x03, 0x1E,
-			0x05, 0xB1, 0x09, 0x0B, 0x19, 0x19, 0x00, 0x00,
-			0x4C, 0x04, 0x6C, 0x07, 0x02, 0x14, 0x1E, 0x05,
-			0x32, 0xA5, 0x13, 0x8A, 0x03, 0x01, 0x3C, 0x17,
-			0x00, 0x1A, 0x00, 0xB2, 0x49, 0x34, 0x48, 0x04,
-			0xB8, 0xDA, 0xB6, 0x00, 0x50, 0x00, 0x00, 0x00,
-			0x00, 0x0A, 0x04, 0x40, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x19, 0x01, 0x00, 0x0A, 0x00, 0x08,
-			0xA3, 0x03, 0x23, 0x07, 0x07, 0x6E, 0x0B, 0x13,
-			0x00, 0x02, 0xEE, 0x00, 0x80, 0x03, 0x0E, 0x1F,
-			0x10, 0x30, 0x00, 0x13, 0x04, 0x00, 0x00, 0x10,
-			0xFF, 0x01, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-			0x18, 0x19, 0x1A, 0x1B, 0x11, 0xFF, 0xFF, 0xFF,
-			0x12, 0x10, 0x0E, 0x0C, 0x06, 0x04, 0x02, 0x01,
-			0x08, 0x09, 0x0A, 0x0B, 0x0D, 0x0F, 0x11, 0x13,
-			0x07, 0x05, 0x03, 0xFF, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x36, 0x36, 0x36, 0x36,
-			0x36, 0x36, 0x36, 0x36, 0x00, 0x02, 0x04, 0x06,
-			0x08, 0x0A, 0x0C, 0x0E, 0x00, 0xA0, 0x0F, 0xFD,
-			0x28, 0x00, 0x20, 0x4E, 0xB3, 0xC8, 0xCD, 0xA0,
-			0x0F, 0x00, 0xC0, 0x80, 0x00, 0x10, 0x00, 0x10,
-			0x00, 0x10, 0x00, 0x10, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,
-			0x30, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-			0x78, 0x53, 0x55, 0x57, 0x59, 0x5B, 0x5D, 0x5F,
-			0x00, 0x28, 0x00, 0x10, 0x0A, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-			0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00},
-	},
-	{
-		.version = 0x3230,
-		.abs_x_min = 35,
-		.abs_x_max = 1090,
-		.abs_y_min = 0,
-		.abs_y_max = 1750,
-		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.default_config = 1,
-		.config = {0x50, 0x52, 0x4F, 0x00, 0x84, 0x0F, 0x03, 0x1E,
-			0x05, 0x20, 0xB1, 0x00, 0x0B, 0x19, 0x19, 0x00,
-			0x00, 0x4C, 0x04, 0x6C, 0x07, 0x1E, 0x05, 0x2D,
-			0x27, 0x05, 0xE9, 0x01, 0x01, 0x30, 0x00, 0x30,
-			0x00, 0xB2, 0x49, 0x33, 0x48, 0x27, 0x97, 0x1C,
-			0x9C, 0x00, 0x70, 0x00, 0x00, 0x00, 0x00, 0x0A,
-			0x04, 0xC0, 0x00, 0x02, 0x16, 0x01, 0x80, 0x01,
-			0x0D, 0x1E, 0x00, 0x2B, 0x00, 0x19, 0x04, 0x1E,
-			0x00, 0x10, 0x0A, 0x01, 0x12, 0x13, 0x14, 0x15,
-			0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x11, 0xFF,
-			0xFF, 0xFF, 0x12, 0x10, 0x0E, 0x0C, 0x06, 0x04,
-			0x02, 0x01, 0x08, 0x09, 0x0A, 0x0B, 0x0D, 0x0F,
-			0x11, 0x13, 0x07, 0x05, 0x03, 0xFF, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x38, 0x38,
-			0x38, 0x38, 0x38, 0x38, 0x38, 0x38, 0x00, 0x03,
-			0x06, 0x09, 0x0C, 0x0F, 0x12, 0x15, 0x00, 0xFF,
-			0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-			0x00, 0xFF, 0xFF, 0x00, 0xC0, 0x80, 0x00, 0x10,
-			0x00, 0x10, 0x00, 0x10, 0x00, 0x10, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			0x80, 0x80, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,
-			0x02, 0x02, 0x20, 0x30, 0x20, 0x20, 0x20, 0x20,
-			0x20, 0x20, 0x51, 0x7E, 0x57, 0x5A, 0x5D, 0x60,
-			0x63, 0x66, 0x30, 0x30, 0x00, 0x1E, 0x19, 0x05,
-			0x00, 0x00, 0x3D, 0x08},
-	},
-	{
-		.version = 0x0000,
-		.abs_x_min = 35,
-		.abs_x_max = 965,
-		.abs_y_min = 0,
-		.abs_y_max = 1770,
-		.flags = SYNAPTICS_FLIP_Y,
-		.gpio_irq = SAGA_GPIO_TP_ATT_N,
-		.default_config = 2,
-		.config = {0x30, 0x30, 0x30, 0x31, 0x84, 0x0F, 0x03, 0x1E,
-			0x05, 0x00, 0x0B, 0x19, 0x19, 0x00, 0x00, 0xE8,
-			0x03, 0x75, 0x07, 0x1E, 0x05, 0x28, 0xF5, 0x28,
-			0x1E, 0x05, 0x01, 0x30, 0x00, 0x30, 0x00, 0x00,
-			0x48, 0x00, 0x48, 0x0D, 0xD6, 0x56, 0xBE, 0x00,
-			0x70, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x04, 0x00,
-			0x02, 0xCD, 0x00, 0x80, 0x03, 0x0D, 0x1F, 0x00,
-			0x21, 0x00, 0x15, 0x04, 0x1E, 0x00, 0x10, 0x02,
-			0x01, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-			0x19, 0x1A, 0x1B, 0x11, 0xFF, 0xFF, 0xFF, 0x03,
-			0x05, 0x07, 0x13, 0x11, 0x0F, 0x0D, 0x0B, 0x0A,
-			0x09, 0x08, 0x01, 0x02, 0x04, 0x06, 0x0C, 0x0E,
-			0x10, 0x12, 0xFF, 0xC0, 0x88, 0xC0, 0x88, 0xC0,
-			0x88, 0xC0, 0x88, 0x3A, 0x34, 0x3A, 0x34, 0x3A,
-			0x34, 0x3C, 0x34, 0x00, 0x04, 0x08, 0x0C, 0x1E,
-			0x14, 0x3C, 0x1E, 0x00, 0x9B, 0x7F, 0x46, 0x20,
-			0x4E, 0x9B, 0x7F, 0x28, 0x80, 0xCC, 0xF4, 0x01,
-			0x00, 0xC0, 0x80, 0x00, 0x10, 0x00, 0x10, 0x00,
-			0x10, 0x00, 0x10, 0x30, 0x30, 0x00, 0x1E, 0x19,
-			0x05, 0x00, 0x00, 0x3D, 0x08, 0x00, 0x00, 0x00,
-			0xBC, 0x02, 0x80},
-	},
-};
-
-static void himax_ts_reset(void)
-{
-	printk(KERN_INFO "%s():\n", __func__);
-	gpio_direction_output(PM8058_GPIO_PM_TO_SYS(SAGA_TP_RSTz), 0);
-	mdelay(10);
-	gpio_direction_output(PM8058_GPIO_PM_TO_SYS(SAGA_TP_RSTz), 1);
-}
-
-static int himax_ts_loadSensorConfig(struct i2c_client *client, struct himax_i2c_platform_data *pdata, struct himax_config_init_api *i2c_api);
-
-struct himax_i2c_platform_data_config_type_3 config_type3[] = {
-	{
-		.version = 0x0D,
-		.tw_id = 0,/* Panasonic */
-
-		.c1 = { 0x62, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c2 = { 0x63, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c3 = { 0x64, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00 },
-		.c4 = { 0x65, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c5 = { 0x66, 0x13, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00 },
-		.c6 = { 0x67, 0x42, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c7 = { 0x68, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00 },
-		.c8 = { 0x69, 0x42, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c9 = { 0x6A, 0x32, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c10 = { 0x6B, 0x40, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c11 = { 0x6C, 0x12, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c12 = { 0x6D, 0x41, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00 },
-		.c13 = { 0xC9, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x0A, 0x0B,
-			  0x0D, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x20, 0x1E,
-			  0x21, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c14 = { 0x8A, 0x00, 0x04, 0x00, 0x04, 0x00, 0x08, 0x2A, 0x0F, 0x4F, 0x70,
-			  0x28, 0x0F, 0x00, 0x86, 0x01, 0xC5, 0x39, 0xE0, 0x0F, 0x00, 0x0B,
-			  0x07, 0xFF, 0xFF, 0x0C, 0x06, 0xFF, 0xFF, 0x0D, 0xFF, 0x08, 0xFF,
-			  0x0E, 0x05, 0xFF, 0xFF, 0x0F, 0xFF, 0x09, 0x1A, 0xFF, 0x04, 0x1C,
-			  0x19, 0xFF, 0xFF, 0x0A, 0x18, 0xFF, 0x03, 0x1B, 0x17, 0xFF, 0x02,
-			  0x1D, 0x16, 0x10, 0xFF, 0xFF, 0x15, 0x11, 0x01, 0xFF, 0x14, 0x00,
-			  0x12, 0xFF, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c15 = { 0xC5, 0x0D, 0x1F, 0x00, 0x10, 0x1B, 0x1F, 0x0B },
-		.c16 = { 0xC6, 0x11, 0x10, 0x17 },
-		.c17 = { 0x7D, 0x00, 0x04, 0x0A, 0x0A, 0x02 },
-		.c18 = { 0x7F, 0x0B, 0x01, 0x01, 0x01, 0x01, 0x05, 0x0A, 0x06, 0x04, 0x06,
-			  0x04, 0x06, 0x04, 0x00 },
-		.c19 = { 0xD5, 0x29, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			  0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c20 = { 0xE9, 0x00, 0x00 },
-		.c21 = { 0xEA, 0x0B, 0x13, 0x00, 0x13 },
-		.c22 = { 0xEB, 0x32, 0x32, 0xFA, 0x83 },
-		.c23 = { 0xEC, 0x02, 0x0F, 0x0A, 0x2D, 0x2D, 0x00, 0x00, 0x00, 0x00 },
-		.c24 = { 0xED, 0x08, 0x06, 0x00, 0x00 },
-		.c25 = { 0xEE, 0x00 },
-		.c26 = { 0xEF, 0x11, 0x00 },
-		.c27 = { 0xF0, 0x40 },
-		.c28 = { 0xF1, 0x06, 0x04, 0x06, 0x03 },
-		.c29 = { 0xF2, 0x0A, 0x06, 0x14, 0x3C },
-		.c30 = { 0xF3, 0x5F },
-		.c31 = { 0xF4, 0x7D, 0xB9, 0x2D, 0x3A },
-		.c32 = { 0xF6, 0x00, 0x00, 0x1D, 0x76, 0x0B },
-		.c33 = { 0xF7, 0x50, 0x5A, 0x5A, 0x0F, 0x40 },
-		.c34 = { 0x35, 0x02, 0x01 },
-		.c35 = { 0x36, 0x0F, 0x53, 0x01 },
-		.c36 = { 0x37, 0xFF, 0x08, 0xFF, 0x08 },
-		.c37 = { 0x39, 0x03 },
-		.c38 = { 0x3A, 0x00 },
-		.c39 = { 0x50, 0xAB },
-		.c40 = { 0x6E, 0x04 },
-		.c41 = { 0x76, 0x01, 0x3F },
-		.c42 = { 0x78, 0x03 },
-		.c43 = { 0x7A, 0x00, 0x18, 0x0D },
-		.c44 = { 0x8B, 0x00, 0x00 },
-		.c45 = { 0x8C, 0x30, 0x0C, 0x0C, 0x0C, 0x0C, 0x08, 0x0C, 0x32, 0x24, 0x80,
-			  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c46 = { 0x8D, 0xA0, 0x5A, 0x14, 0x0A, 0x32, 0x0A, 0x00, 0x00, 0x00, 0x00,
-			  0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c47 = { 0xC2, 0x11, 0x00, 0x00, 0x00 },
-		.c48 = { 0xCB, 0x01, 0xF5, 0xFF, 0xFF, 0x01, 0x00, 0x05, 0x00, 0x05, 0x00 },
-		.c49 = { 0xD4, 0x01, 0x04, 0x07 },
-		.c50 = { 0xDD, 0x05, 0x02 },
-		.checksum = { 0xAC, 0x2C, 0x4C },
-	},
-	{
-		.version = 0x0D,
-		.tw_id = 1,/* Nissha */
-
-		.c1 = { 0x62, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c2 = { 0x63, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c3 = { 0x64, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00 },
-		.c4 = { 0x65, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c5 = { 0x66, 0x13, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00 },
-		.c6 = { 0x67, 0x42, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c7 = { 0x68, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00 },
-		.c8 = { 0x69, 0x42, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c9 = { 0x6A, 0x32, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c10 = { 0x6B, 0x40, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c11 = { 0x6C, 0x12, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00 },
-		.c12 = { 0x6D, 0x41, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00 },
-		.c13 = { 0xC9, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x0A, 0x0B,
-			 0x0D, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C, 0x20, 0x1E,
-			 0x21, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c14 = { 0x8A, 0x00, 0x04, 0x00, 0x04, 0x00, 0x08, 0x2A, 0x0F, 0x4F, 0x70,
-			 0x28, 0x0F, 0x00, 0x86, 0x01, 0xC5, 0x39, 0xE0, 0x0F, 0x00, 0x0B,
-			 0x07, 0xFF, 0xFF, 0x0C, 0x06, 0xFF, 0xFF, 0x0D, 0xFF, 0x08, 0xFF,
-			 0x0E, 0x05, 0xFF, 0xFF, 0x0F, 0xFF, 0x09, 0x1A, 0xFF, 0x04, 0x1C,
-			 0x19, 0xFF, 0xFF, 0x0A, 0x18, 0xFF, 0x03, 0x1B, 0x17, 0xFF, 0x02,
-			 0x1D, 0x16, 0x10, 0xFF, 0xFF, 0x15, 0x11, 0x01, 0xFF, 0x14, 0x00,
-			 0x12, 0xFF, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c15 = { 0xC5, 0x0A, 0x1F, 0x00, 0x10, 0x1B, 0x1F, 0x0B },
-		.c16 = { 0xC6, 0x11, 0x10, 0x16 },
-		.c17 = { 0x7D, 0x00, 0x04, 0x0A, 0x0A, 0x02 },
-		.c18 = { 0x7F, 0x0A, 0x01, 0x01, 0x01, 0x01, 0x06, 0x04, 0x07, 0x0D, 0x07,
-			 0x0D, 0x07, 0x0D, 0x00 },
-		.c19 = { 0xD5, 0x29, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c20 = { 0xE9, 0x00, 0x00 },
-		.c21 = { 0xEA, 0x0B, 0x13, 0x00, 0x13 },
-		.c22 = { 0xEB, 0x32, 0x32, 0xFA, 0x83 },
-		.c23 = { 0xEC, 0x01, 0x0F, 0x0A, 0x2D, 0x2D, 0x00, 0x00, 0x00, 0x00 },
-		.c24 = { 0xED, 0x08, 0x06, 0x00, 0x00 },
-		.c25 = { 0xEE, 0x00 },
-		.c26 = { 0xEF, 0x11, 0x00 },
-		.c27 = { 0xF0, 0x40 },
-		.c28 = { 0xF1, 0x06, 0x04, 0x06, 0x03 },
-		.c29 = { 0xF2, 0x0A, 0x06, 0x14, 0x3C },
-		.c30 = { 0xF3, 0x5F },
-		.c31 = { 0xF4, 0x7D, 0xB9, 0x2D, 0x3A },
-		.c32 = { 0xF6, 0x00, 0x00, 0x1D, 0x76, 0x0A },
-		.c33 = { 0xF7, 0x50, 0x64, 0x64, 0x0F, 0x40 },
-		.c34 = { 0x35, 0x02, 0x01 },
-		.c35 = { 0x36, 0x0F, 0x53, 0x01 },
-		.c36 = { 0x37, 0xFF, 0x08, 0xFF, 0x08 },
-		.c37 = { 0x39, 0x03 },
-		.c38 = { 0x3A, 0x00 },
-		.c39 = { 0x50, 0xAB },
-		.c40 = { 0x6E, 0x04 },
-		.c41 = { 0x76, 0x01, 0x3F },
-		.c42 = { 0x78, 0x03 },
-		.c43 = { 0x7A, 0x00, 0x18, 0x0D },
-		.c44 = { 0x8B, 0x00, 0x00 },
-		.c45 = { 0x8C, 0x30, 0x10, 0x10, 0x10, 0x0C, 0x08, 0x0C, 0x32, 0x24, 0x80,
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c46 = { 0x8D, 0xA0, 0x5A, 0x14, 0x0A, 0x32, 0x0A, 0x00, 0x00, 0x00, 0x00,
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
-		.c47 = { 0xC2, 0x11, 0x00, 0x00, 0x00 },
-		.c48 = { 0xCB, 0x01, 0xF5, 0xFF, 0xFF, 0x01, 0x00, 0x05, 0x00, 0x05, 0x00 },
-		.c49 = { 0xD4, 0x01, 0x04, 0x07 },
-		.c50 = { 0xDD, 0x05, 0x02 },
-		.checksum = { 0xAC, 0x5E, 0x4C },
-	},
-};
-
-#define CC(pa) do { \
-	i2c_api->i2c_himax_master_write(client, pa , sizeof(pa), normalRetry); \
-} while (0)
-
-struct himax_i2c_platform_data himax_ts_data = {
-	.slave_addr = 0x90,
-	.abs_x_min = 0,
-	.abs_x_max = 1024,
-	.abs_y_min = 0,
-	.abs_y_max = 950,
-	.abs_pressure_min = 0,
-	.abs_pressure_max = 200,
-	.abs_width_min = 0,
-	.abs_width_max = 200,
-	.gpio_irq = SAGA_GPIO_TP_ATT_N,
-	.version = 0x00,
-	.tw_id = 0,
-	.event_htc_enable = 0,
-	.cable_config = { 0x90, 0x00},
-	.powerOff3V3 = 0,
-	.power = saga_ts_power,
-	.protocol_type = PROTOCOL_TYPE_B,
-	.screenWidth = 480,
-	.screenHeight = 800,
-	.loadSensorConfig = himax_ts_loadSensorConfig,
-	.reset = himax_ts_reset,
-	.type1 = 0,
-	.type1_size = 0,
-	.type2 = 0,
-	.type2_size = 0,
-	.type3 = config_type3,
-	.type3_size = sizeof(config_type3),
-};
-
-static int himax_ts_loadSensorConfig(struct i2c_client *client, struct himax_i2c_platform_data *pdata, struct himax_config_init_api *i2c_api)
-{
-	uint8_t act_len;
-	int result;
-	char Data = 0;
-	char cmd[3] = {0};
-	int retryTimes = 0, i = 0;
-	const int firstRetry = 3;
-	const int normalRetry = 10;
-	uint8_t tw_id = 0;
-	uint8_t fw_ver = 0;
-	struct himax_i2c_platform_data_config_type_1 *type1_selected = 0;
-	struct himax_i2c_platform_data_config_type_2 *type2_selected = 0;
-	struct himax_i2c_platform_data_config_type_3 *type3_selected = 0;
-	uint8_t *type1_checksum = 0;
-	uint8_t *type2_checksum = 0;
-	uint8_t *type3_checksum = 0;
-
-start:
-	if (!pdata || !client || !i2c_api) {
-		printk(KERN_ERR "[TP][TOUCH_ERR]%s: Necessary parameters are null!\n", __func__);
-		return -1;
-	}
-	result = i2c_api->i2c_himax_write_command(client, 0x81, firstRetry);
-	if (result < 0) {
-		printk(KERN_INFO "[TP]No Himax chip inside\n");
-		return -EIO;
-	} else {
-		hr_msleep(150);
-
-		cmd[0] = 0x36;
-		cmd[1] = 0x0F;
-		cmd[2] = 0x53;
-		i2c_api->i2c_himax_master_write(client, cmd , sizeof(cmd), normalRetry);
-		cmd[0] = 0xDD;
-		cmd[1] = 0x04;
-		cmd[2] = 0x02;
-		i2c_api->i2c_himax_master_write(client, cmd , sizeof(cmd), normalRetry);
-		i2c_api->i2c_himax_write_command(client, 0x83, normalRetry);
-		hr_msleep(100);
-		i2c_api->i2c_himax_write_command(client, 0x82, normalRetry);
-		i2c_api->i2c_himax_write_command(client, 0xF5, normalRetry);
-		i2c_api->i2c_himax_read_command(client, 1, &tw_id, &act_len, normalRetry);
-		i2c_api->i2c_himax_write_command(client, 0x32, normalRetry);
-		i2c_api->i2c_himax_read_command(client, 1, &fw_ver, &act_len, normalRetry);
-
-		if (pdata->type3) {
-			for (i = 0; i < pdata->type3_size/sizeof(struct himax_i2c_platform_data_config_type_3); ++i) {
-				if (fw_ver >= (pdata->type3)[i].version && tw_id == (pdata->type3)[i].tw_id) {
-					type3_selected = &((pdata->type3)[i]);
-					pdata->version = (pdata->type3)[i].version;
-					pdata->tw_id = (pdata->type3)[i].tw_id;
-					pdata->regCD = (pdata->type3)[i].c50;
-					if (*((pdata->type3[i]).checksum))
-						type3_checksum = (pdata->type3)[i].checksum;
-					printk(KERN_INFO "[TP]type3 selected, %X, %X\n", (uint32_t)type3_selected, (uint32_t)type3_checksum);
-				}
-			}
-		}
-
-		if (pdata->type2 && !type3_selected) {
-			for (i = 0; i < pdata->type2_size/sizeof(struct himax_i2c_platform_data_config_type_2); ++i) {
-				if (fw_ver >= (pdata->type2)[i].version && tw_id == (pdata->type2)[i].tw_id) {
-					type2_selected = &((pdata->type2)[i]);
-					pdata->version = (pdata->type2[i]).version;
-					pdata->tw_id = (pdata->type2[i]).tw_id;
-					if (*((pdata->type2[i]).checksum))
-						type2_checksum = (pdata->type2[i]).checksum;
-					printk(KERN_INFO "[TP]type2 selected, %X, %X\n", (uint32_t)type2_selected, (uint32_t)type2_checksum);
-				}
-			}
-		}
-
-		if (pdata->type1 && !type2_selected && !type3_selected) {
-			for (i = 0; i < pdata->type1_size/sizeof(struct himax_i2c_platform_data_config_type_1); ++i) {
-				if (fw_ver >= (pdata->type1[i]).version && tw_id == (pdata->type1[i]).tw_id) {
-					type1_selected = &((pdata->type1)[i]);
-					pdata->version = (pdata->type1[i]).version;
-					pdata->tw_id = (pdata->type1[i]).tw_id;
-					if (*((pdata->type1[i]).checksum))
-						type1_checksum = (pdata->type1[i]).checksum;
-					printk(KERN_INFO "[TP]type1 selected, %X, %X\n", (uint32_t)type1_selected, (uint32_t)type1_checksum);
-				}
-			}
-		}
-		switch (tw_id & 0x03) {
-		case 0x00:/* Panasonic */
-			printk(KERN_INFO "[TP]%s: Panasonic touch window detected.\n", __func__);
-			break;
-		case 0x01:/* nissha */
-			printk(KERN_INFO "[TP]%s: Nissha touch window detected.\n", __func__);
-			break;
-		}
-		if (!type1_selected && !type2_selected && !type3_selected) {
-			printk(KERN_ERR "[TP][TOUCH_ERR]%s: Couldn't find the matched profile!\n", __func__);
-			return -1;
-		}
-
-		printk(KERN_INFO "[TP]%s: start initializing Sensor configs\n", __func__);
-	}
-
-	do {
-		if (retryTimes == 5) {
-			pdata->reset();
-			hr_msleep(50);
-			++retryTimes;
-			goto start;
-		} else if (retryTimes == 11) {
-			printk(KERN_ERR "[TP][TOUCH_ERR]%s: Himax configuration checksum error!\n", __func__);
-			return -EIO;
-		}
-
-		if (type1_checksum || type2_checksum || type3_checksum) {
-			/* Reset Check Sum */
-			cmd[0] = 0xAB; cmd[1] = 0x00;
-			i2c_api->i2c_himax_master_write(client, cmd , 2, normalRetry);
-			/* Start Check Sum */
-			cmd[1] = 0x01;
-			i2c_api->i2c_himax_master_write(client, cmd , 2, normalRetry);
-		}
-
-		if (type3_selected) {
-			CC(type3_selected->c1); CC(type3_selected->c2); CC(type3_selected->c3); CC(type3_selected->c4);
-			CC(type3_selected->c5); CC(type3_selected->c6); CC(type3_selected->c7); CC(type3_selected->c8);
-			CC(type3_selected->c9); CC(type3_selected->c10); CC(type3_selected->c11); CC(type3_selected->c12);
-			CC(type3_selected->c13); CC(type3_selected->c14); CC(type3_selected->c15); CC(type3_selected->c16);
-			CC(type3_selected->c17); CC(type3_selected->c18); CC(type3_selected->c19); CC(type3_selected->c20);
-			CC(type3_selected->c21); CC(type3_selected->c22); CC(type3_selected->c23); CC(type3_selected->c24);
-			CC(type3_selected->c25); CC(type3_selected->c26); CC(type3_selected->c27); CC(type3_selected->c28);
-			CC(type3_selected->c29); CC(type3_selected->c30); CC(type3_selected->c31); CC(type3_selected->c32);
-			CC(type3_selected->c33); CC(type3_selected->c34); CC(type3_selected->c35); CC(type3_selected->c36);
-			CC(type3_selected->c37); CC(type3_selected->c38); CC(type3_selected->c39); CC(type3_selected->c40);
-			CC(type3_selected->c41); CC(type3_selected->c42); CC(type3_selected->c43); CC(type3_selected->c44);
-			CC(type3_selected->c45); CC(type3_selected->c46); CC(type3_selected->c47); CC(type3_selected->c48);
-			CC(type3_selected->c49); CC(type3_selected->c50);
-		} else if (type2_selected) {
-			CC(type2_selected->c1); CC(type2_selected->c2); CC(type2_selected->c3); CC(type2_selected->c4);
-			CC(type2_selected->c5); CC(type2_selected->c6); CC(type2_selected->c7); CC(type2_selected->c8);
-			CC(type2_selected->c9); CC(type2_selected->c10); CC(type2_selected->c11); CC(type2_selected->c12);
-			CC(type2_selected->c13); CC(type2_selected->c14); CC(type2_selected->c15); CC(type2_selected->c16);
-			CC(type2_selected->c17); CC(type2_selected->c18); CC(type2_selected->c19); CC(type2_selected->c20);
-			CC(type2_selected->c21); CC(type2_selected->c22); CC(type2_selected->c23); CC(type2_selected->c24);
-			CC(type2_selected->c25); CC(type2_selected->c26); CC(type2_selected->c27); CC(type2_selected->c28);
-			CC(type2_selected->c29); CC(type2_selected->c30); CC(type2_selected->c31); CC(type2_selected->c32);
-			CC(type2_selected->c33); CC(type2_selected->c34); CC(type2_selected->c35); CC(type2_selected->c36);
-			CC(type2_selected->c37); CC(type2_selected->c38); CC(type2_selected->c39); CC(type2_selected->c40);
-			CC(type2_selected->c41); CC(type2_selected->c42); CC(type2_selected->c43); CC(type2_selected->c44);
-			CC(type2_selected->c45);
-		} else {
-		}
-
-		if (type1_checksum || type2_checksum || type3_checksum) {
-		/* Stop Check Sum */
-			cmd[0] = 0xAB; cmd[1] = 0x10;
-			i2c_api->i2c_himax_master_write(client, cmd , 2, normalRetry);
-
-			/* Enter Golden Pattern */
-			if (type1_checksum) {
-				printk(KERN_INFO "[TP]Check type 1 checksum.\n");
-				i2c_api->i2c_himax_master_write(client, type1_selected->checksum, sizeof(type1_selected->checksum), normalRetry);
-			} else if (type2_checksum) {
-				printk(KERN_INFO "[TP]Check type 2 checksum.\n");
-				i2c_api->i2c_himax_master_write(client, type2_selected->checksum, sizeof(type2_selected->checksum), normalRetry);
-			} else if (type3_checksum) {
-				printk(KERN_INFO "[TP]Check type 3 checksum.\n");
-				i2c_api->i2c_himax_master_write(client, type3_selected->checksum, sizeof(type3_selected->checksum), normalRetry);
-			}
-
-			/* Read Hardware Check Sum */
-			i2c_api->i2c_himax_write_command(client, 0xAB, normalRetry);
-			i2c_api->i2c_himax_read_command(client, 1, &Data, &act_len, normalRetry);
-		}
-
-		++retryTimes;
-	/* Check Software and Hardware Check Sum */
-	} while (Data != 0x10 && ((uint32_t)type1_checksum ^ (uint32_t)type2_checksum ^ (uint32_t)type3_checksum));
-
-	/* Turn on reload disable */
-	cmd[0] = 0x42; cmd[1] = 0x02;
-	i2c_api->i2c_himax_master_write(client, cmd , 2, normalRetry);
-
-	i2c_api->i2c_himax_write_command(client, 0x83, normalRetry);
-	hr_msleep(100);
-
-	return result;
-}
-
-static ssize_t saga_himax_virtual_keys_show(struct kobject *kobj,
-			struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf,
-		__stringify(EV_KEY) ":" __stringify(KEY_BACK)	":59:849:80:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_HOME)	":240:849:90:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_APP_SWITCH)	":421:849:90:50"
-		"\n");
-}
-
-static ssize_t saga_himax_virtual_keys_show_china_mfg(struct kobject *kobj,
-			struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf,
-		__stringify(EV_KEY) ":" __stringify(KEY_BACK)	":65:849:80:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_HOME)	":180:849:83:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_APP_SWITCH)	":310:849:88:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_MENU)	":445:849:91:50"
-		"\n");
-}
-
-static ssize_t saga_himax_virtual_keys_show_china(struct kobject *kobj,
-			struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf,
-		__stringify(EV_KEY) ":" __stringify(KEY_BACK)	":65:849:80:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_HOME)	":180:849:83:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_APP_SWITCH)	":310:849:88:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_WEIBO)	":445:849:91:50"
-		"\n");
-}
-
-static ssize_t saga_atmel_virtual_keys_show(struct kobject *kobj,
-			struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf,
-		__stringify(EV_KEY) ":" __stringify(KEY_HOME)	":65:845:80:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_MENU)	":180:845:83:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_BACK)	":310:845:88:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_SEARCH) ":445:845:91:50"
-		"\n");
-}
-
-static ssize_t saga_synaptics_virtual_keys_show(struct kobject *kobj,
-			struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf,
-		__stringify(EV_KEY) ":" __stringify(KEY_BACK)	":59:849:80:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_HOME)	":240:849:90:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_APP_SWITCH)	":421:849:90:50"
-		"\n");
-}
-
-static ssize_t saga_synaptics_virtual_keys_show_china_mfg(struct kobject *kobj,
-			struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf,
-		__stringify(EV_KEY) ":" __stringify(KEY_BACK)	":65:849:80:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_HOME)	":180:849:83:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_APP_SWITCH)	":310:849:88:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_MENU)	":445:849:91:50"
-		"\n");
-}
-
-static ssize_t saga_synaptics_virtual_keys_show_china(struct kobject *kobj,
-			struct kobj_attribute *attr, char *buf)
-{
-	return sprintf(buf,
-		__stringify(EV_KEY) ":" __stringify(KEY_BACK)	":65:849:80:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_HOME)	":180:849:83:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_APP_SWITCH)	":310:849:88:50"
-		":" __stringify(EV_KEY) ":" __stringify(KEY_WEIBO)	":445:849:91:50"
-		"\n");
-}
-
-static struct kobj_attribute saga_himax_virtual_keys_attr = {
-	.attr = {
-		.name = "virtualkeys.himax-touchscreen",
-		.mode = S_IRUGO,
-	},
-	.show = &saga_himax_virtual_keys_show,
 };
 
 static struct kobj_attribute saga_atmel_virtual_keys_attr = {
@@ -1074,18 +275,8 @@ static struct kobj_attribute saga_atmel_virtual_keys_attr = {
 	.show = &saga_atmel_virtual_keys_show,
 };
 
-static struct kobj_attribute saga_synaptics_virtual_keys_attr = {
-	.attr = {
-		.name = "virtualkeys.synaptics-rmi-touchscreen",
-		.mode = S_IRUGO,
-	},
-	.show = &saga_synaptics_virtual_keys_show,
-};
-
 static struct attribute *saga_properties_attrs[] = {
 	&saga_atmel_virtual_keys_attr.attr,
-	&saga_synaptics_virtual_keys_attr.attr,
-	&saga_himax_virtual_keys_attr.attr,
 	NULL
 };
 
@@ -1094,17 +285,17 @@ static struct attribute_group saga_properties_attr_group = {
 };
 
 
-static DEFINE_MUTEX(capella_cm36282_lock);
+static DEFINE_MUTEX(capella_cm3628_lock);
 static int als_power_control;
 
-static int __capella_cm36282_power(int on)
+static int __capella_cm3628_power(int on)
 {
 	int rc;
 	struct vreg *vreg;
 
 	printk(KERN_INFO "%s: system_rev %d\n", __func__, system_rev);
 
-	vreg = vreg_get(0, "gp4");
+	vreg = vreg_get(0, "gp7");
 
 	if (!vreg) {
 		printk(KERN_ERR "%s: vreg error\n", __func__);
@@ -1112,7 +303,7 @@ static int __capella_cm36282_power(int on)
 	}
 	rc = vreg_set_level(vreg, 2850);
 
-	printk(KERN_DEBUG "%s: Turn the capella_cm36282 power %s\n",
+	printk(KERN_DEBUG "%s: Turn the capella_cm3628 power %s\n",
 		__func__, (on) ? "on" : "off");
 
 	if (on) {
@@ -1128,11 +319,11 @@ static int __capella_cm36282_power(int on)
 	return rc;
 }
 
-static int capella_cm36282_power(int pwr_device, uint8_t enable)
+static int capella_cm3628_power(int pwr_device, uint8_t enable)
 {
 	unsigned int old_status = 0;
 	int ret = 0, on = 0;
-	mutex_lock(&capella_cm36282_lock);
+	mutex_lock(&capella_cm3628_lock);
 
 	old_status = als_power_control;
 	if (enable)
@@ -1142,33 +333,37 @@ static int capella_cm36282_power(int pwr_device, uint8_t enable)
 
 	on = als_power_control ? 1 : 0;
 	if (old_status == 0 && on)
-		ret = __capella_cm36282_power(1);
+		ret = __capella_cm3628_power(1);
 	else if (!on)
-		ret = __capella_cm36282_power(0);
+		ret = __capella_cm3628_power(0);
 
-	mutex_unlock(&capella_cm36282_lock);
+	mutex_unlock(&capella_cm3628_lock);
 	return ret;
 }
 
-static struct cm3629_platform_data cm36282_pdata = {
-	.model = CAPELLA_CM36282,
-	.ps_select = CM3629_PS1_ONLY,
-	.intr = PM8058_GPIO_PM_TO_SYS(SAGA_GPIO_PS_INT_N),
-	.levels = { 3, 5, 7, 75, 132, 2495, 4249, 5012, 5775, 65535},
-	.golden_adc = 0xC0C,
-	.power = capella_cm36282_power,
-	.cm3629_slave_address = 0xC0>>1,
-	.ps1_thd_set = 0x03,
-	.ps1_thd_no_cal = 0xF1,
-	.ps1_thd_with_cal = 0x03,
-	.ps_calibration_rule = 1,
-	.ps_conf1_val = CM3629_PS_DR_1_320 | CM3629_PS_IT_1_6T |
-			CM3629_PS1_PERS_1,
-	.ps_conf2_val = CM3629_PS_ITB_1 | CM3629_PS_ITR_1 |
-			CM3629_PS2_INT_DIS | CM3629_PS1_INT_DIS,
-	.ps_conf3_val = CM3629_PS2_PROL_32,
+static struct cm3628_platform_data cm3628_pdata = {
+	.intr = SAGA_GPIO_PROXIMITY_INT_N,
+	.levels = { 0x1, 0x3, 0x5, 0x48, 0x8C, 0x5AA,
+			0x9E5, 0xF96, 0x1547, 0xFFFF},
+	.golden_adc = 0x730,
+	.power = capella_cm3628_power,
+	.ALS_slave_address = 0x30>>1,
+	.PS_slave_address = 0x32>>1,
+	.check_interrupt_add = 0x18>>1	,
+	.is_cmd = CM3628_ALS_IT_400ms | CM3628_ALS_PERS_2,
+	.ps_thd_set = 0x3,
+	.ps_thd_with_cal = 0x3,
+	.ps_thd_no_cal = 0x7,
+	.ps_conf2_val = 0,/*saga don't need test mode*/
+	.ps_calibration_rule = 2,
+	.ps_conf1_val = CM3628_PS_DR_1_320 |CM3628_PS_IT_1T,
+	.ps_adc_offset = 0x3,
+	.ps_adc_offset2 = 0xa,
 };
 
+static struct tps65200_platform_data tps65200_data = {
+	.charger_check = 0,
+};
 
 static struct i2c_board_info i2c_devices[] = {
 	{
@@ -1177,29 +372,26 @@ static struct i2c_board_info i2c_devices[] = {
 		.irq = MSM_GPIO_TO_INT(SAGA_GPIO_TP_ATT_N)
 	},
 	{
-		I2C_BOARD_INFO(SYNAPTICS_3200_NAME, 0x40 >> 1),
-		.platform_data = &saga_ts_synaptics_data,
-		.irq = MSM_GPIO_TO_INT(SAGA_GPIO_TP_ATT_N)
+		I2C_BOARD_INFO(BMA150_I2C_NAME, 0x70 >> 1),
+		.platform_data = &gsensor_platform_data,
+		.irq = MSM_GPIO_TO_INT(SAGA_GPIO_GSENSOR_INT_N),
 	},
 	{
-		I2C_BOARD_INFO(HIMAX8526A_NAME, 0x90>>1),
-		.platform_data  = &himax_ts_data,
-		.irq = MSM_GPIO_TO_INT(SAGA_GPIO_TP_ATT_N),
+		I2C_BOARD_INFO(CM3628_I2C_NAME, 0x30 >> 1),
+		.platform_data = &cm3628_pdata,
+		.irq = MSM_GPIO_TO_INT(SAGA_GPIO_PROXIMITY_INT_N),
 	},
 	{
-		I2C_BOARD_INFO(CM3629_I2C_NAME, 0xC0 >> 1),
-		.platform_data = &cm36282_pdata,
-		.irq = MSM_GPIO_TO_INT(
-		       PM8058_GPIO_PM_TO_SYS(SAGA_GPIO_PS_INT_N))
+		I2C_BOARD_INFO("tps65200", 0xD4 >> 1),
+		.platform_data = &tps65200_data,
 	},
-};
-/*
-static struct bma250_platform_data gsensor_platform_data = {
-	.intr = MSM_GPIO_TO_INT(PM8058_GPIO_PM_TO_SYS(
-			SAGA_GPIO_GSENSOR_INT)),
-	.chip_layout = 1,
 };
 
+static struct bma150_platform_data gsensor_platform_data = {
+	.intr = SAGA_GPIO_GSENSOR_INT,
+	.chip_layout = 1,
+};
+/*
 static struct i2c_board_info i2c_Sensors_devices[] = {
 	{
 		I2C_BOARD_INFO(BMA250_I2C_NAME, 0x30 >> 1),
@@ -1212,161 +404,139 @@ static struct i2c_board_info i2c_Sensors_devices[] = {
 static int pm8058_gpios_init(void)
 {
 	int rc;
-/*
-	struct pm8xxx_gpio_init_info sdc4_en = {
-		PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_SDC4_EN_N),
-		{
-			.direction      = PM_GPIO_DIR_OUT,
-			.pull           = PM_GPIO_PULL_NO,
-			.vin_sel        = PM8058_GPIO_VIN_L5,
-			.function       = PM_GPIO_FUNC_NORMAL,
-			.inv_int_pol    = 0,
-			.out_strength   = PM_GPIO_STRENGTH_LOW,
-			.output_value   = 0,
-		},
-	};
 
-	struct pm8xxx_gpio_init_info haptics_enable = {
-		PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_HAP_ENABLE),
+	struct pm8xxx_gpio_init_info saga_tp_rstz = {
+		PM8058_GPIO_PM_TO_SYS(SAGA_TP_RSTz),
 		{
-			.direction      = PM_GPIO_DIR_OUT,
-			.pull           = PM_GPIO_PULL_NO,
-			.out_strength   = PM_GPIO_STRENGTH_HIGH,
-			.function       = PM_GPIO_FUNC_NORMAL,
-			.inv_int_pol    = 0,
-			.vin_sel        = 2,
-			.output_buffer  = PM_GPIO_OUT_BUF_CMOS,
-			.output_value   = 0,
-		},
+			.direction	= PM_GPIO_DIR_OUT,
+			.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
+			.output_value	= 1,
+			.pull		= PM_GPIO_PULL_NO,
+			.vin_sel	= PM8058_GPIO_VIN_L5,
+			.out_strength	= PM_GPIO_STRENGTH_HIGH,
+			.function	= PM_GPIO_FUNC_NORMAL,
+			.inv_int_pol	= 0,
+		}
 	};
-
-	struct pm8xxx_gpio_init_info hdmi_5V_en = {
-		PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_HDMI_5V_EN_V3),
+	struct pm8xxx_gpio_init_info saga_sdmc_cd_n = {
+		PM8058_GPIO_PM_TO_SYS(SAGA_SDMC_CD_N),
 		{
-			.direction      = PM_GPIO_DIR_OUT,
-			.pull           = PM_GPIO_PULL_NO,
-			.vin_sel        = PM8058_GPIO_VIN_VPH,
-			.function       = PM_GPIO_FUNC_NORMAL,
-			.out_strength   = PM_GPIO_STRENGTH_LOW,
-			.output_value   = 0,
-		},
+			.direction	= PM_GPIO_DIR_IN,
+			.output_buffer	= 0,
+			.output_value	= 0,
+			.pull		= PM_GPIO_PULL_UP_31P5,
+			.vin_sel	= PM8058_GPIO_VIN_L5,
+			.out_strength	= 0,
+			.function	= PM_GPIO_FUNC_NORMAL,
+			.inv_int_pol	= 0,
+		}
 	};
-*/
-	struct pm8xxx_gpio_init_info gpio15 = {
-		PM8058_GPIO_PM_TO_SYS(SAGA_GPIO_FLASH_EN),
+	struct pm8xxx_gpio_init_info saga_vol_up = {
+		PM8058_GPIO_PM_TO_SYS(SAGA_VOL_UP),
 		{
-			.direction      = PM_GPIO_DIR_OUT,
-			.output_buffer  = PM_GPIO_OUT_BUF_CMOS,
-			.output_value   = 0,
-			.pull           = PM_GPIO_PULL_NO,
-			.vin_sel        = 6,
-			.out_strength   = PM_GPIO_STRENGTH_HIGH,
-			.function       = PM_GPIO_FUNC_NORMAL,
+			.direction	= PM_GPIO_DIR_IN,
+			.output_buffer	= 0,
+			.output_value	= 0,
+			.pull		= PM_GPIO_PULL_UP_31P5,
+			.vin_sel	= PM8058_GPIO_VIN_S3,
+			.out_strength	= 0,
+			.function	= PM_GPIO_FUNC_NORMAL,
+			.inv_int_pol	= 0,
+		}
+	};
+	struct pm8xxx_gpio_init_info saga_vol_dn = {
+		PM8058_GPIO_PM_TO_SYS(SAGA_VOL_DN),
+		{
+			.direction	= PM_GPIO_DIR_IN,
+			.output_buffer	= 0,
+			.output_value	= 0,
+			.pull		= PM_GPIO_PULL_UP_31P5,
+			.vin_sel	= PM8058_GPIO_VIN_S3,
+			.out_strength	= 0,
+			.function	= PM_GPIO_FUNC_NORMAL,
+			.inv_int_pol	= 0,
+		}
+	};
+	struct pm8xxx_gpio_init_info saga_green_led = {
+		PM8058_GPIO_PM_TO_SYS(SAGA_GREEN_LED),
+		{
+			.direction	= PM_GPIO_DIR_OUT,
+			.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
+			.output_value	= 1,
+			.pull		= PM_GPIO_PULL_NO,
+			.vin_sel	= PM8058_GPIO_VIN_L5,
+			.out_strength	= PM_GPIO_STRENGTH_HIGH,
+			.function	= PM_GPIO_FUNC_2,
+			.inv_int_pol	= 0,
+		}
+	};
+	struct pm8xxx_gpio_init_info saga_amber_led = {
+		PM8058_GPIO_PM_TO_SYS(SAGA_AMBER_LED),
+		{
+			.direction	= PM_GPIO_DIR_OUT,
+			.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
+			.output_value	= 1,
+			.pull		= PM_GPIO_PULL_NO,
+			.vin_sel	= PM8058_GPIO_VIN_L5,
+			.out_strength	= PM_GPIO_STRENGTH_HIGH,
+			.function	= PM_GPIO_FUNC_2,
+			.inv_int_pol	= 0,
+		}
+	};
+	struct pm8xxx_gpio_init_info saga_aud_hp_detz = {
+		PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_DETz),
+		{
+			.direction	= PM_GPIO_DIR_IN,
+			.output_buffer	= 0,
+			.output_value	= 0,
+			.pull		= PM_GPIO_PULL_UP_31P5,
+			.vin_sel	= PM8058_GPIO_VIN_S3,
+			.out_strength	= 0,
+			.function	= PM_GPIO_FUNC_NORMAL,
+			.inv_int_pol	= 0,
+		}
+	};
+	struct pm8xxx_gpio_init_info saga_aud_spk_en = {
+		PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN),
+		{
+			.direction	= PM_GPIO_DIR_OUT,
+			.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
+			.output_value	= 1,
+			.pull		= PM_GPIO_PULL_NO,
+			.vin_sel	= PM8058_GPIO_VIN_S3,
+			.out_strength	= PM_GPIO_STRENGTH_HIGH,
+			.function	= PM_GPIO_FUNC_NORMAL,
+			.inv_int_pol	= 0,
+		}
+	};
+	struct pm8xxx_gpio_init_info saga_ps_shdn = {
+		PM8058_GPIO_PM_TO_SYS(SAGA_PS_SHDN),
+		{
+			.direction	= PM_GPIO_DIR_OUT,
+			.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
+			.output_value	= 0,
+			.pull		= PM_GPIO_PULL_NO,
+			.vin_sel	= PM8058_GPIO_VIN_L5,
+			.out_strength	= PM_GPIO_STRENGTH_HIGH,
+			.function	= PM_GPIO_FUNC_NORMAL,
+			.inv_int_pol	= 0,
 		}
 	};
 
-	struct pm8xxx_gpio_init_info gpio18 = {
-		PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_SD),
-		{
-			.direction      = PM_GPIO_DIR_OUT,
-			.output_buffer  = PM_GPIO_OUT_BUF_CMOS,
-			.output_value   = 0,
-			.pull           = PM_GPIO_PULL_NO,
-			.vin_sel        = 6,
-			.out_strength   = PM_GPIO_STRENGTH_LOW,
-			.function       = PM_GPIO_FUNC_NORMAL,
-		}
-	};
+	pm8xxx_gpio_config(saga_tp_rstz.gpio, &saga_tp_rstz.config);
+	pm8xxx_gpio_config(saga_sdmc_cd_n.gpio, &saga_sdmc_cd_n.config);
+	pm8xxx_gpio_config(saga_vol_up.gpio, &saga_vol_up.config);
+	pm8xxx_gpio_config(saga_vol_dn.gpio, &saga_vol_dn.config);
+	pm8xxx_gpio_config(saga_green_led.gpio, &saga_green_led.config);
+	pm8xxx_gpio_config(saga_amber_led.gpio, &saga_amber_led.config);
+	pm8xxx_gpio_config(saga_aud_hp_detz.gpio, &saga_aud_hp_detz.config);
 
-	struct pm8xxx_gpio_init_info gpio19 = {
-		PM8058_GPIO_PM_TO_SYS(SAGA_AUD_AMP_EN),
-		{
-			.direction      = PM_GPIO_DIR_OUT,
-			.output_buffer  = PM_GPIO_OUT_BUF_CMOS,
-			.output_value   = 0,
-			.pull           = PM_GPIO_PULL_NO,
-			.vin_sel        = 6,
-			.out_strength   = PM_GPIO_STRENGTH_LOW,
-			.function       = PM_GPIO_FUNC_NORMAL,
-		}
-	};
-
-	struct pm8xxx_gpio_init_info keypad_gpio = {
-		PM8058_GPIO_PM_TO_SYS(0),
-		{
-			.direction      = PM_GPIO_DIR_IN,
-			.output_buffer  = PM_GPIO_OUT_BUF_CMOS,
-			.output_value   = 0,
-			.pull           = PM_GPIO_PULL_UP_31P5,
-			.vin_sel        = PM8058_GPIO_VIN_S3,
-			.out_strength   = PM_GPIO_STRENGTH_NO,
-			.function       = PM_GPIO_FUNC_NORMAL,
-		}
-	};
-
-#ifdef CONFIG_MMC_MSM_CARD_HW_DETECTION
-	struct pm8xxx_gpio_init_info sdcc_det = {
-		PM8058_GPIO_PM_TO_SYS(SAGA_GPIO_SDMC_CD_N),
-		{
-			.direction      = PM_GPIO_DIR_IN,
-			.pull           = PM_GPIO_PULL_UP_31P5,
-			.vin_sel        = PM8058_GPIO_VIN_L5,
-			.function       = PM_GPIO_FUNC_NORMAL,
-			.inv_int_pol    = 0,
-		},
-	};
-#endif
-	struct pm8xxx_gpio_init_info psensor_gpio = {
-	PM8058_GPIO_PM_TO_SYS(SAGA_GPIO_PS_INT_N),
-		{
-			.direction      = PM_GPIO_DIR_IN,
-			.output_buffer  = PM_GPIO_OUT_BUF_CMOS,
-			.output_value   = 0,
-			.pull           = PM_GPIO_PULL_UP_31P5,
-			.vin_sel        = PM8058_GPIO_VIN_L5,
-			.out_strength   = PM_GPIO_STRENGTH_NO,
-			.function       = PM_GPIO_FUNC_NORMAL,
-		}
-	};
-	rc = pm8xxx_gpio_config(psensor_gpio.gpio, &psensor_gpio.config);
+	rc = pm8xxx_gpio_config(saga_aud_spk_en.gpio, &saga_aud_spk_en.config);
 	if (rc) {
-		pr_err("%s SAGA_GPIO_PS_INT_N config failed\n", __func__);
-		return rc;
-	} else
-		pr_info("%s [cm3628][PS]SAGA_GPIO_PS_INT_N config ok\n", __func__);
-
-	rc = pm8xxx_gpio_config(gpio15.gpio, &gpio15.config);
-	if (rc) {
-		pr_err("%s SAGA_GPIO_FLASH_EN config failed\n", __func__);
-		return rc;
-	}
-	rc = pm8xxx_gpio_config(gpio18.gpio, &gpio18.config);
-	if (rc) {
-		pr_err("%s SAGA_AUD_SPK_SD config failed\n", __func__);
-		return rc;
-	}
-
-	rc = pm8xxx_gpio_config(gpio19.gpio, &gpio19.config);
-	if (rc) {
-		pr_err("%s SAGA_AUD_AMP_EN config failed\n", __func__);
+		pr_err("%s SAGA_AUD_SPK_EN config failed\n", __func__);
 		return rc;
 	}
 /*
-	if (machine_is_msm8x55_svlte_surf() || machine_is_msm8x55_svlte_ffa() ||
-						machine_is_msm7x30_fluid())
-		hdmi_5V_en.gpio = PMIC_GPIO_HDMI_5V_EN_V2;
-	else
-		hdmi_5V_en.gpio = PMIC_GPIO_HDMI_5V_EN_V3;
-
-	hdmi_5V_en.gpio = PM8058_GPIO_PM_TO_SYS(hdmi_5V_en.gpio);
-
-	rc = pm8xxx_gpio_config(hdmi_5V_en.gpio, &hdmi_5V_en.config);
-	if (rc) {
-		pr_err("%s PMIC_GPIO_HDMI_5V_EN config failed\n", __func__);
-		return rc;
-	}
-*/
-
 #ifdef CONFIG_MMC_MSM_CARD_HW_DETECTION
 	if (machine_is_msm7x30_fluid())
 		sdcc_det.config.inv_int_pol = 1;
@@ -1377,7 +547,7 @@ static int pm8058_gpios_init(void)
 		return rc;
 	}
 #endif
-
+*/
 	keypad_gpio.gpio = SAGA_VOL_UP;
 	pm8xxx_gpio_config(keypad_gpio.gpio, &keypad_gpio.config);
 	keypad_gpio.gpio = SAGA_VOL_DN;
@@ -1411,7 +581,7 @@ static int pm8058_gpios_init(void)
 	return 0;
 }
 /* Regulator API support */
-
+/*
 #ifdef CONFIG_MSM_PROC_COMM_REGULATOR
 static struct platform_device msm_proccomm_regulator_dev = {
 	.name = PROCCOMM_REGULATOR_DEV_NAME,
@@ -1421,7 +591,7 @@ static struct platform_device msm_proccomm_regulator_dev = {
 	}
 };
 #endif
-
+*/
 static int pm8058_pwm_config(struct pwm_device *pwm, int ch, int on)
 {
 	struct pm_gpio pwm_gpio_config = {
@@ -1510,12 +680,12 @@ static int pm8058_pwm_enable(struct pwm_device *pwm, int ch, int on)
 	}
 	return rc;
 }
-
+/*
 static const unsigned int fluid_keymap[] = {
 	KEY(0, 0, KEY_7),
 	KEY(0, 1, KEY_ENTER),
 	KEY(0, 2, KEY_UP),
-	/* drop (0,3) as it always shows up in pair with(0,2) */
+	// drop (0,3) as it always shows up in pair with(0,2)
 	KEY(0, 4, KEY_DOWN),
 
 	KEY(1, 0, KEY_CAMERA_SNAPSHOT),
@@ -1550,7 +720,7 @@ static const unsigned int surf_keymap[] = {
 	KEY(2, 3, KEY_3),
 	KEY(2, 4, KEY_NUMERIC_STAR),
 	KEY(2, 5, KEY_UP),
-	KEY(2, 6, KEY_DOWN), /* SYN */
+	KEY(2, 6, KEY_DOWN),
 	KEY(2, 7, KEY_LEFTSHIFT),
 
 	KEY(3, 0, KEY_9),
@@ -1592,7 +762,7 @@ static const unsigned int surf_keymap[] = {
 	KEY(7, 0, KEY_V),
 	KEY(7, 1, KEY_B),
 	KEY(7, 2, KEY_N),
-	KEY(7, 3, KEY_MENU), /* REVISIT - SYM */
+	KEY(7, 3, KEY_MENU),
 	KEY(7, 4, KEY_PAGEDOWN),
 	KEY(7, 5, KEY_Z),
 	KEY(7, 6, KEY_X),
@@ -1626,7 +796,7 @@ static const unsigned int surf_keymap[] = {
 	KEY(10, 7, KEY_DOT),
 
 	KEY(11, 0, KEY_LEFTCTRL),
-	KEY(11, 1, KEY_F11),  /* START */
+	KEY(11, 1, KEY_F11),
 	KEY(11, 2, KEY_ENTER),
 	KEY(11, 3, KEY_SEARCH),
 	KEY(11, 4, KEY_DELETE),
@@ -1674,7 +844,7 @@ static struct pm8xxx_keypad_platform_data fluid_keypad_data = {
 	.wakeup			= 1,
 	.keymap_data		= &fluid_keymap_data,
 };
-
+*/
 static struct pm8xxx_vibrator_platform_data pm8058_vib_pdata = {
        .initial_vibrate_ms  = 0,
        .level_mV = 3000,
@@ -1684,7 +854,7 @@ static struct pm8058_pwm_pdata pm8058_pwm_data = {
 	.config         = pm8058_pwm_config,
 	.enable         = pm8058_pwm_enable,
 };
-
+/*
 static struct pmic8058_led pmic8058_ffa_leds[] = {
 	[0] = {
 		.name		= "keyboard-backlight",
@@ -1743,7 +913,7 @@ static struct pmic8058_leds_platform_data pm8058_fluid_leds_data = {
 	.num_leds = ARRAY_SIZE(pmic8058_fluid_leds),
 	.leds	= pmic8058_fluid_leds,
 };
-
+*/
 static struct pm8xxx_irq_platform_data pm8xxx_irq_pdata = {
 	.irq_base		= PMIC8058_IRQ_BASE,
 	.devirq			= MSM_GPIO_TO_INT(PMIC_GPIO_INT),
@@ -1790,11 +960,13 @@ static struct i2c_board_info i2c_tps_devices[] = {
 };
 
 static struct i2c_board_info msm_camera_boardinfo[] __initdata = {
+/*
 #ifdef CONFIG_S5K4E5YX
 	{
 		I2C_BOARD_INFO("s5k4e5yx", 0x20 >> 1),
 	},
 #endif
+*/
 };
 
 #ifdef CONFIG_MSM_CAMERA
@@ -1958,7 +1130,7 @@ static int Primou_s5k4e5yx_vreg_off(void)
 	return rc;
 }
 #endif
-
+/*
 static int config_camera_on_gpios(void)
 {
 	pr_info("[CAM] config_camera_on_gpios\n");
@@ -2000,15 +1172,11 @@ struct msm_camera_device_platform_data camera_device_data = {
   .ioext.csisz  = 0x00000400,
   .ioext.csiirq = INT_CSI,
 };
-
-#if defined(CONFIG_ARCH_MSM_FLASHLIGHT) && defined(CONFIG_S5K4E5YX)
+*/
+#if defined(CONFIG_ARCH_MSM_FLASHLIGHT)
 static int flashlight_control(int mode)
 {
-#ifdef CONFIG_FLASHLIGHT_TPS61310
-	return tps61310_flashlight_control(mode);
-#else
-	return 0;
-#endif
+	return aat1271_flashlight_control(mode);
 }
 #endif
 #if defined(CONFIG_ARCH_MSM_FLASHLIGHT) && defined(CONFIG_S5K4E5YX)
