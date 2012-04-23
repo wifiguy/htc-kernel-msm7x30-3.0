@@ -25,8 +25,6 @@
 #include <linux/leds.h>
 #include <linux/mfd/marimba.h>
 #include <linux/i2c.h>
-//#include <linux/bma250.h>
-//#include <linux/cm3629.h>
 #include <linux/bma150.h>
 #include <linux/akm8975.h>
 #include <linux/capella_cm3602.h>
@@ -185,7 +183,7 @@ static void config_gpio_table(uint32_t *table, int len)
 	}
 }
 
-static int saga_ts_power(int on)
+static int saga_ts_atmel_power(int on)
 {
 	pr_info("%s: power %d\n", __func__, on);
 
@@ -231,7 +229,6 @@ struct atmel_i2c_platform_data saga_ts_atmel_data[] = {
 		.config_T28 = {0, 0, 2, 8, 16, 60},
 		.object_crc = {0x77, 0xA1, 0x0A},
 		.cable_config = {40, 20, 8, 16},
-		.cal_tchthr = {45, 45},
 		.GCAF_level = {20, 24, 28, 40, 63},
 		.filter_level = {30, 60, 963, 993},
 	},
@@ -266,6 +263,18 @@ struct atmel_i2c_platform_data saga_ts_atmel_data[] = {
 		.filter_level = {30, 60, 963, 993},
 	},
 };
+
+
+static ssize_t saga_atmel_virtual_keys_show(struct kobject *kobj,
+			struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf,
+		__stringify(EV_KEY) ":" __stringify(KEY_HOME)	":65:845:80:50"
+		":" __stringify(EV_KEY) ":" __stringify(KEY_MENU)	":180:845:83:50"
+		":" __stringify(EV_KEY) ":" __stringify(KEY_BACK)	":310:845:88:50"
+		":" __stringify(EV_KEY) ":" __stringify(KEY_SEARCH) ":445:845:91:50"
+		"\n");
+}
 
 static struct kobj_attribute saga_atmel_virtual_keys_attr = {
 	.attr = {
@@ -362,7 +371,13 @@ static struct cm3628_platform_data cm3628_pdata = {
 };
 
 static struct tps65200_platform_data tps65200_data = {
+	.gpio_chg_int = MSM_GPIO_TO_INT(PM8058_GPIO_PM_TO_SYS(SAGA_GPIO_CHG_INT)),
 	.charger_check = 0,
+};
+
+static struct bma150_platform_data gsensor_platform_data = {
+	.intr = SAGA_GPIO_GSENSOR_INT_N,
+	.chip_layout = 1,
 };
 
 static struct i2c_board_info i2c_devices[] = {
@@ -387,10 +402,6 @@ static struct i2c_board_info i2c_devices[] = {
 	},
 };
 
-static struct bma150_platform_data gsensor_platform_data = {
-	.intr = SAGA_GPIO_GSENSOR_INT,
-	.chip_layout = 1,
-};
 /*
 static struct i2c_board_info i2c_Sensors_devices[] = {
 	{
@@ -536,6 +547,12 @@ static int pm8058_gpios_init(void)
 		pr_err("%s SAGA_AUD_SPK_EN config failed\n", __func__);
 		return rc;
 	}
+
+	rc = pm8xxx_gpio_config(saga_ps_shdn.gpio, &saga_ps_shdn.config);
+	if (rc) {
+		pr_err("%s SAGA_PS_SHDN config failed\n", __func__);
+		return rc;
+	}
 /*
 #ifdef CONFIG_MMC_MSM_CARD_HW_DETECTION
 	if (machine_is_msm7x30_fluid())
@@ -548,10 +565,10 @@ static int pm8058_gpios_init(void)
 	}
 #endif
 */
-	keypad_gpio.gpio = SAGA_VOL_UP;
+/*	keypad_gpio.gpio = SAGA_VOL_UP;
 	pm8xxx_gpio_config(keypad_gpio.gpio, &keypad_gpio.config);
 	keypad_gpio.gpio = SAGA_VOL_DN;
-	pm8xxx_gpio_config(keypad_gpio.gpio, &keypad_gpio.config);
+	pm8xxx_gpio_config(keypad_gpio.gpio, &keypad_gpio.config);	*/
 #if 0
 	if (machine_is_msm7x30_fluid()) {
 		/* Haptics gpio */
@@ -916,7 +933,7 @@ static struct pmic8058_leds_platform_data pm8058_fluid_leds_data = {
 */
 static struct pm8xxx_irq_platform_data pm8xxx_irq_pdata = {
 	.irq_base		= PMIC8058_IRQ_BASE,
-	.devirq			= MSM_GPIO_TO_INT(PMIC_GPIO_INT),
+	.devirq			= MSM_GPIO_TO_INT(SAGA_PMIC_GPIO_INT),
 	.irq_trigger_flag       = IRQF_TRIGGER_LOW,
 };
 
@@ -941,16 +958,12 @@ static struct msm_ssbi_platform_data msm7x30_ssbi_pm8058_pdata __devinitdata = {
 	.controller_type = MSM_SBI_CTRL_PMIC_ARBITER,
 	.slave	= {
 		.name			= "pm8058-core",
-		.irq = MSM_GPIO_TO_INT(PMIC_GPIO_INT),
+		.irq = MSM_GPIO_TO_INT(SAGA_PMIC_GPIO_INT),
 		.platform_data		= &pm8058_7x30_data,
 	},
 	.rspinlock_name	= "D:PMIC_SSBI",
 };
 #endif
-
-static struct tps65200_platform_data tps65200_data = {
-	.gpio_chg_int = MSM_GPIO_TO_INT(PM8058_GPIO_PM_TO_SYS(SAGA_GPIO_CHG_INT)),
-};
 
 static struct i2c_board_info i2c_tps_devices[] = {
 	{
@@ -970,12 +983,12 @@ static struct i2c_board_info msm_camera_boardinfo[] __initdata = {
 };
 
 #ifdef CONFIG_MSM_CAMERA
-static uint32_t camera_off_gpio_table[] = {
+/*static uint32_t camera_off_gpio_table[] = {
 };
 
 static uint32_t camera_on_gpio_table[] = {
 };
-
+*/
 #if defined(CONFIG_RAWCHIP) || defined(CONFIG_S5k4E5YX)
 static int sensor_power_enable(char *power, unsigned volt)
 {
@@ -1033,7 +1046,7 @@ static int sensor_power_disable(char *power)
 #endif
 
 
-static int sensor_version = 999;
+//static int sensor_version = 999;
 #ifdef CONFIG_S5K4E5YX
 static int saga_sensor_version(void)
 {
@@ -1173,6 +1186,7 @@ struct msm_camera_device_platform_data camera_device_data = {
   .ioext.csiirq = INT_CSI,
 };
 */
+
 #if defined(CONFIG_ARCH_MSM_FLASHLIGHT)
 static int flashlight_control(int mode)
 {
@@ -1597,9 +1611,9 @@ static unsigned aux_pcm_gpio_on[] = {
 	GPIO_CFG(141, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),   /* PCM_CLK  */
 };
 
-static struct tpa2051d3_platform_data tpa2051d3_platform_data = {
+/*static struct tpa2051d3_platform_data tpa2051d3_platform_data = {
 	.gpio_tpa2051_spk_en = SAGA_AUD_SPK_SD,
-};
+};*/
 
 static int __init aux_pcm_gpio_init(void)
 {
@@ -1747,16 +1761,16 @@ int mi2s_unconfig_clk_gpio(void)
 
 static int __init buses_init(void)
 {
-	if (gpio_tlmm_config(GPIO_CFG(PMIC_GPIO_INT, 1, GPIO_CFG_INPUT,
+	if (gpio_tlmm_config(GPIO_CFG(SAGA_PMIC_GPIO_INT, 1, GPIO_CFG_INPUT,
 				  GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE))
 		pr_err("%s: gpio_tlmm_config (gpio=%d) failed\n",
-		       __func__, PMIC_GPIO_INT);
+		       __func__, SAGA_PMIC_GPIO_INT);
 
-	if (machine_is_msm8x60_fluid())
+/*	if (machine_is_msm8x60_fluid())
 		pm8058_7x30_data.keypad_pdata = &fluid_keypad_data;
 	else
 		pm8058_7x30_data.keypad_pdata = &surf_keypad_data;
-
+*/
 	return 0;
 }
 
@@ -2438,12 +2452,12 @@ static struct i2c_board_info msm_i2c_gsbi7_timpani_info[] = {
 	},
 };
 
-static struct i2c_board_info tpa2051_devices[] = {
+/*static struct i2c_board_info tpa2051_devices[] = {
 	{
 		I2C_BOARD_INFO(TPA2051D3_I2C_NAME, 0xE0 >> 1),
 		.platform_data = &tpa2051d3_platform_data,
 	},
-};
+};*/
 #ifdef CONFIG_MSM7KV2_AUDIO
 static struct resource msm_aictl_resources[] = {
 	{
@@ -2808,7 +2822,7 @@ static struct android_usb_platform_data android_usb_pdata = {
 	.functions = usb_functions_all,
 	.fserial_init_string = "tty:modem,tty:autobot,tty:serial,tty:autobot",
 	.nluns = 2,
-	.usb_id_pin_gpio = SAGA_GPIO_USB_ID1_PIN,
+	.usb_id_pin_gpio = SAGA_GPIO_USB_ID_PIN,
 };
 
 static struct platform_device android_usb_device = {
@@ -3053,7 +3067,7 @@ static struct i2c_board_info bma150_board_info[] __initdata = {
 };
 */
 #endif
-
+/*
 static struct bma250_platform_data gsensor_bma250_platform_data = {
 	.intr = SAGA_GPIO_GSENSOR_INT,
 	.chip_layout = 0,
@@ -3069,7 +3083,7 @@ static struct i2c_board_info i2c_bma250_devices[] = {
 	},
 };
 
-/*
+
 static struct i2c_board_info msm_i2c_board_info[] = {
 	{
 		I2C_BOARD_INFO("m33c01", OPTNAV_I2C_SLAVE_ADDR),
@@ -3226,31 +3240,67 @@ static struct spi_board_info spi_rawchip_board_info[] __initdata = {
 };
 #endif
 
-static uint32_t qsd_spi_gpio_on_table[] = {
-	PCOM_GPIO_CFG(SAGA_GPIO_MCAM_SPI_CLK, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_CFG_4MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_MCAM_SPI_DO, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_CFG_4MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_MCAM_SPI_DI, 1, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_CFG_4MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_MCAM_SPI_CS, 2, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_CFG_4MA)
+static struct spi_board_info msm_spi_board_info[] __initdata = {
+
+	{
+		.modalias       = "spi_qsd",
+		.mode           = SPI_MODE_3,
+		.bus_num        = 0,
+		.chip_select    = 2,
+		.max_speed_hz   = 10000000,
+        },
+
+	{
+		.modalias	= "spi_aic3254",
+		.mode           = SPI_MODE_1,
+		.bus_num        = 0,
+		.chip_select    = 3,
+		.max_speed_hz   = 9963243,
+	}
 };
 
-static uint32_t qsd_spi_gpio_off_table[] = {
-	PCOM_GPIO_CFG(SAGA_GPIO_MCAM_SPI_CLK, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_CFG_4MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_MCAM_SPI_DO, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_CFG_4MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_MCAM_SPI_DI, 1, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_CFG_4MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_MCAM_SPI_CS, 2, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_CFG_4MA)
-};
+//void msm_proc_comm_reset_modem_now(void);
+//int msm_proc_comm(unsigned cmd, unsigned *data1, unsigned *data2);
 
 static int msm_qsd_spi_gpio_config(void)
 {
-	config_gpio_table(qsd_spi_gpio_on_table,
-		ARRAY_SIZE(qsd_spi_gpio_on_table));
+	/* Move SPI configuration to OJ initialization to
+	   prevent from power leakage through OJ compoment */
+
+	unsigned id;
+	id = PCOM_GPIO_CFG(45, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_CFG_8MA);
+//	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
+	id = PCOM_GPIO_CFG(47, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_CFG_8MA);
+//	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
+	id = PCOM_GPIO_CFG(48, 1, GPIO_INPUT, GPIO_NO_PULL, GPIO_CFG_8MA);
+//	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
+	id = PCOM_GPIO_CFG(87, 2, GPIO_OUTPUT, GPIO_PULL_UP, GPIO_CFG_6MA);
+//	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
+
+	/* SPI GPIO for AIC3254 */
+	id = PCOM_GPIO_CFG(89, 2, GPIO_OUTPUT, GPIO_PULL_UP, GPIO_CFG_8MA);
+//	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
+
 	return 0;
 }
 
 static void msm_qsd_spi_gpio_release(void)
 {
-	config_gpio_table(qsd_spi_gpio_off_table,
-		ARRAY_SIZE(qsd_spi_gpio_off_table));
+	/* Move SPI configuration to OJ initialization to
+	   prevent from power leakage through OJ compoment */
+
+	unsigned id;
+	id = PCOM_GPIO_CFG(45, 0, GPIO_OUTPUT, GPIO_PULL_DOWN, GPIO_CFG_6MA);
+//	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
+	id = PCOM_GPIO_CFG(47, 0, GPIO_OUTPUT, GPIO_PULL_DOWN, GPIO_CFG_6MA);
+//	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
+	id = PCOM_GPIO_CFG(48, 0, GPIO_INPUT, GPIO_NO_PULL, GPIO_CFG_6MA);
+//	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
+	id = PCOM_GPIO_CFG(87, 0, GPIO_OUTPUT, GPIO_PULL_DOWN, GPIO_CFG_6MA);
+//	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
+
+	id = PCOM_GPIO_CFG(89, 0, GPIO_INPUT, GPIO_PULL_UP, GPIO_CFG_6MA);
+//	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
 }
 
 static struct msm_spi_platform_data qsd_spi_pdata = {
@@ -3736,7 +3786,7 @@ static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
 
 	/* for bcm BT */
 	.bt_wakeup_pin_supported = 1,
-	.bt_wakeup_pin = SAGA_GPIO_BT_WAKE,
+	.bt_wakeup_pin = SAGA_GPIO_BT_CHIP_WAKE,
 	.host_wakeup_pin = SAGA_GPIO_BT_HOST_WAKE,
 };
 #endif
@@ -3806,34 +3856,16 @@ static struct platform_device ram_console_device = {
 
 /* HEADSET DRIVER BEGIN */
 
-#define HEADSET_DETECT		SAGA_GPIO_35MM_HEADSET_DET
-#define HEADSET_BUTTON		SAGA_AUD_REMO_PRES
-
-/* HTC_HEADSET_GPIO Driver */
-static struct htc_headset_gpio_platform_data htc_headset_gpio_data = {
-	.hpin_gpio		= HEADSET_DETECT,
-	.key_enable_gpio	= 0,
-	.mic_select_gpio	= 0,
-};
-
-static struct platform_device htc_headset_gpio = {
-	.name	= "HTC_HEADSET_GPIO",
-	.id	= -1,
-	.dev	= {
-		.platform_data	= &htc_headset_gpio_data,
-	},
-};
-
 /* HTC_HEADSET_PMIC Driver */
 static struct htc_headset_pmic_platform_data htc_headset_pmic_data = {
 	.driver_flag		= DRIVER_HS_PMIC_RPC_KEY,
-	.hpin_gpio		= 0,
-	.hpin_irq		= 0,
-	.key_gpio		= PM8058_GPIO_PM_TO_SYS(HEADSET_BUTTON),
-	.key_irq		= 0,
-	.key_enable_gpio	= 0,
+	.hpin_gpio		= PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_DETz),
+	.hpin_irq		= MSM_GPIO_TO_INT(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_DETz)),
+//	.key_gpio		= PM8058_GPIO_PM_TO_SYS(HEADSET_BUTTON),
+//	.key_irq		= 0,
+//	.key_enable_gpio	= 0,
 	.adc_mic		= 14894,
-	.adc_remote		= {0, 1714, 1715, 5630, 5631, 12048},
+	.adc_remote		= {0, 2502, 2860, 6822, 9086, 13614},
 	.hs_controller		= 0,
 	.hs_switch		= 0,
 };
@@ -3849,7 +3881,7 @@ static struct platform_device htc_headset_pmic = {
 /* HTC_HEADSET_MGR Driver */
 static struct platform_device *headset_devices[] = {
 	&htc_headset_pmic,
-	&htc_headset_gpio,
+//	&htc_headset_gpio,
 	/* Please put the headset detection driver on the last */
 };
 
@@ -4039,28 +4071,28 @@ int64_t saga_get_usbid_adc(void)
 }
 
 static uint32_t usb_ID_PIN_input_table[] = {
-	GPIO_CFG(SAGA_GPIO_USB_ID1_PIN, 0, GPIO_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_4MA),
+	GPIO_CFG(SAGA_GPIO_USB_ID_PIN, 0, GPIO_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_4MA),
 };
 
 static uint32_t usb_ID_PIN_ouput_table[] = {
-	GPIO_CFG(SAGA_GPIO_USB_ID1_PIN, 0, GPIO_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_4MA),
+	GPIO_CFG(SAGA_GPIO_USB_ID_PIN, 0, GPIO_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_4MA),
 };
 
 void config_saga_usb_id_gpios(bool output)
 {
 	if (output) {
 		config_gpio_table(usb_ID_PIN_ouput_table, ARRAY_SIZE(usb_ID_PIN_ouput_table));
-		gpio_set_value(SAGA_GPIO_USB_ID1_PIN, 1);
-		printk(KERN_INFO "%s %d output high\n",  __func__, SAGA_GPIO_USB_ID1_PIN);
+		gpio_set_value(SAGA_GPIO_USB_ID_PIN, 1);
+		printk(KERN_INFO "%s %d output high\n",  __func__, SAGA_GPIO_USB_ID_PIN);
 	} else {
 		config_gpio_table(usb_ID_PIN_input_table, ARRAY_SIZE(usb_ID_PIN_input_table));
-		printk(KERN_INFO "%s %d input none pull\n",  __func__, SAGA_GPIO_USB_ID1_PIN);
+		printk(KERN_INFO "%s %d input none pull\n",  __func__, SAGA_GPIO_USB_ID_PIN);
 	}
 }
 
 static struct cable_detect_platform_data cable_detect_pdata = {
 	.detect_type 		= CABLE_TYPE_PMIC_ADC,
-	.usb_id_pin_gpio 	= SAGA_GPIO_USB_ID1_PIN,
+	.usb_id_pin_gpio 	= SAGA_GPIO_USB_ID_PIN,
 	.config_usb_id_gpios 	= config_saga_usb_id_gpios,
 	.get_adc_cb		= saga_get_usbid_adc,
 };
@@ -5368,7 +5400,7 @@ static struct msm_tsif_platform_data tsif_platform_data = {
 };
 #endif /* defined(CONFIG_TSIF) || defined(CONFIG_TSIF_MODULE) */
 /* TSIF end   */
-
+/*
 static void __init pmic8058_leds_init(void)
 {
 	if (machine_is_msm7x30_surf())
@@ -5378,7 +5410,7 @@ static void __init pmic8058_leds_init(void)
 	else if (machine_is_msm7x30_fluid())
 		pm8058_7x30_data.leds_pdata = &pm8058_fluid_leds_data;
 }
-
+*/
 static struct msm_spm_platform_data msm_spm_data __initdata = {
 	.reg_base_addr = MSM_SAW_BASE,
 
@@ -5625,7 +5657,7 @@ static void saga_te_gpio_config(void)
 __setup("androidboot.serialno=", board_serialno_setup);
 static void __init saga_init(void)
 {
-	int rc = 0, i = 0;
+	int rc = 0;
 	struct kobject *properties_kobj;
 	unsigned smem_size;
 	uint32_t soc_version = 0;
@@ -5688,7 +5720,7 @@ static void __init saga_init(void)
 #endif
 	/*platform_add_devices(msm_footswitch_devices,
 			     msm_num_footswitch_devices);*/
-	pmic8058_leds_init();
+//	pmic8058_leds_init();
 
 	buses_init();
 	if (board_mfg_mode()==1) {
@@ -5725,10 +5757,7 @@ static void __init saga_init(void)
 	msm_snddev_init();
 	saga_audio_init();
 #endif
-#ifdef CONFIG_RAWCHIP
-	spi_register_board_info(spi_rawchip_board_info,
-	ARRAY_SIZE(spi_rawchip_board_info));
-#endif
+	spi_register_board_info(msm_spi_board_info, ARRAY_SIZE(msm_spi_board_info));
 #ifdef CONFIG_FLASHLIGHT_TPS61310
 	i2c_register_board_info(0, saga_flashlight,
 	ARRAY_SIZE(saga_flashlight));
@@ -5749,14 +5778,14 @@ static void __init saga_init(void)
 					ARRAY_SIZE(bma150_board_info));
 #endif
 
-	i2c_register_board_info(0,
-			i2c_bma250_devices, ARRAY_SIZE(i2c_bma250_devices));
+//	i2c_register_board_info(0,
+//			i2c_bma250_devices, ARRAY_SIZE(i2c_bma250_devices));
 
 	i2c_register_board_info(2, msm_marimba_board_info,
 			ARRAY_SIZE(msm_marimba_board_info));
 
-	i2c_register_board_info(0, tpa2051_devices,
-			ARRAY_SIZE(tpa2051_devices));
+//	i2c_register_board_info(0, tpa2051_devices,
+//			ARRAY_SIZE(tpa2051_devices));
 
 	i2c_register_board_info(2, msm_i2c_gsbi7_timpani_info,
 			ARRAY_SIZE(msm_i2c_gsbi7_timpani_info));
@@ -5796,18 +5825,18 @@ static void __init saga_init(void)
 
 	config_gpio_table(camera_on_gpio_table, ARRAY_SIZE(camera_on_gpio_table));
 #endif
-	if (board_mfg_mode() == 1) {
+/*	if (board_mfg_mode() == 1) {
 		for (i = 0; i < ARRAY_SIZE(saga_ts_synaptics_data);  i++)
 			saga_ts_synaptics_data[i].mfg_flag = 1;
 	}
-
+*/
 	i2c_register_board_info(0, i2c_devices,
 				ARRAY_SIZE(i2c_devices));
 /*
 	i2c_register_board_info(0, i2c_Sensors_devices,
 				ARRAY_SIZE(i2c_Sensors_devices));
 */
-	device_mid = get_model_id();
+/*	device_mid = get_model_id();
 	if (strstr(device_mid, "PK7612")) {
 		if (1 == board_mfg_mode()) {
 			saga_synaptics_virtual_keys_attr.show = &saga_synaptics_virtual_keys_show_china_mfg;
@@ -5817,7 +5846,7 @@ static void __init saga_init(void)
 			saga_himax_virtual_keys_attr.show = &saga_himax_virtual_keys_show_china;
 		}
 	}
-
+*/
 	/*Virtual_key*/
 	properties_kobj = kobject_create_and_add("board_properties", NULL);
 	if (properties_kobj)
@@ -5834,6 +5863,7 @@ static void __init saga_init(void)
 	saga_wifi_init();
 }
 
+/*
 static unsigned pmem_sf_size = MSM_PMEM_SF_SIZE;
 static int __init pmem_sf_size_setup(char *p)
 {
@@ -5841,7 +5871,7 @@ static int __init pmem_sf_size_setup(char *p)
 	return 0;
 }
 early_param("pmem_sf_size", pmem_sf_size_setup);
-
+*/
 static unsigned fb_size = MSM_FB_SIZE;
 static int __init fb_size_setup(char *p)
 {
@@ -5857,7 +5887,7 @@ static int __init pmem_adsp_size_setup(char *p)
 	return 0;
 }
 early_param("pmem_adsp_size", pmem_adsp_size_setup);
-
+/*
 static unsigned pmem_adsp2_size = MSM_PMEM_ADSP2_SIZE;
 static int __init pmem_adsp2_size_setup(char *p)
 {
@@ -5873,7 +5903,7 @@ static int __init pmem_audio_size_setup(char *p)
 	return 0;
 }
 early_param("pmem_audio_size", pmem_audio_size_setup);
-
+*/
 static struct memtype_reserve msm7x30_reserve_table[] __initdata = {
 	[MEMTYPE_SMI] = {
 	},
@@ -5901,9 +5931,9 @@ static void __init size_pmem_devices(void)
 {
 #ifdef CONFIG_ANDROID_PMEM
 	size_pmem_device(&android_pmem_adsp_pdata, 0, pmem_adsp_size);
-	size_pmem_device(&android_pmem_adsp2_pdata, 0, pmem_adsp2_size);
-	size_pmem_device(&android_pmem_audio_pdata, 0, pmem_audio_size);
-	size_pmem_device(&android_pmem_pdata, 0, pmem_sf_size);
+//	size_pmem_device(&android_pmem_adsp2_pdata, 0, pmem_adsp2_size);
+//	size_pmem_device(&android_pmem_audio_pdata, 0, pmem_audio_size);
+//	size_pmem_device(&android_pmem_pdata, 0, pmem_sf_size);
 	msm7x30_reserve_table[MEMTYPE_EBI1].size += PMEM_KERNEL_EBI1_SIZE;
 #endif
 }
@@ -5920,8 +5950,8 @@ static void __init reserve_pmem_memory(void)
 {
 #ifdef CONFIG_ANDROID_PMEM
 	reserve_memory_for(&android_pmem_adsp_pdata);
-	reserve_memory_for(&android_pmem_adsp2_pdata);
-	reserve_memory_for(&android_pmem_audio_pdata);
+//	reserve_memory_for(&android_pmem_adsp2_pdata);
+//	reserve_memory_for(&android_pmem_audio_pdata);
 	reserve_memory_for(&android_pmem_pdata);
 #endif
 }
