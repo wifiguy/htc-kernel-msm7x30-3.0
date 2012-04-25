@@ -35,7 +35,7 @@ struct flashlight_struct {
 	struct led_classdev fl_lcdev;
 	struct early_suspend early_suspend_flashlight;
 	struct hrtimer timer;
-	struct wake_lock wake_lock;
+//	struct wake_lock wake_lock;
 	spinlock_t spin_lock;
 	uint32_t gpio_torch;
 	uint32_t gpio_flash;
