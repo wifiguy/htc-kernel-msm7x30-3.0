@@ -19,14 +19,16 @@
 #include <linux/delay.h>
 
 #include <mach/gpio.h>
+#include <mach/pmic.h>
 #include <mach/dal.h>
 #include "board-saga.h"
-#include <mach/qdsp5v2/snddev_icodec.h>
-#include <mach/qdsp5v2/snddev_ecodec.h>
-#include <mach/qdsp5v2/audio_def.h>
-#include <mach/qdsp5v2/voice.h>
+#include <mach/qdsp5v2_2x/snddev_icodec.h>
+#include <mach/qdsp5v2_2x/snddev_ecodec.h>
+#include <mach/qdsp5v2_2x/audio_def.h>
+#include <mach/qdsp5v2_2x/voice.h>
 #include <mach/htc_acoustic_7x30.h>
 #include <mach/htc_acdb_7x30.h>
+#include <mach/board_htc.h>
 #include <linux/spi/spi_aic3254.h>
 
 static struct mutex bt_sco_lock;
@@ -39,6 +41,7 @@ static atomic_t aic3254_ctl = ATOMIC_INIT(0);
 #define BIT_FM_SPK	(1 << 3)
 #define BIT_FM_HS	(1 << 4)
 
+#define PMGPIO(x) (x-1)
 #define SAGA_ACDB_RADIO_BUFFER_SIZE (1024 * 3072)
 
 static struct q5v2_hw_info q5v2_audio_hw[Q5V2_HW_COUNT] = {
@@ -93,38 +96,45 @@ static struct q5v2_hw_info q5v2_audio_hw[Q5V2_HW_COUNT] = {
 };
 
 static unsigned aux_pcm_gpio_off[] = {
-	PCOM_GPIO_CFG(SAGA_GPIO_BT_PCM_OUT, 0, GPIO_INPUT,
-			GPIO_PULL_DOWN, GPIO_2MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_BT_PCM_IN, 0, GPIO_INPUT,
-			GPIO_PULL_DOWN, GPIO_2MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_BT_PCM_SYNC, 0, GPIO_INPUT,
-			GPIO_PULL_DOWN, GPIO_2MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_BT_PCM_CLK, 0, GPIO_INPUT,
-			GPIO_PULL_DOWN, GPIO_2MA),
+	GPIO_CFG(SAGA_GPIO_BT_PCM_OUT, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_2MA),
+	GPIO_CFG(SAGA_GPIO_BT_PCM_IN, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_2MA),
+	GPIO_CFG(SAGA_GPIO_BT_PCM_SYNC, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_2MA),
+	GPIO_CFG(SAGA_GPIO_BT_PCM_CLK, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_2MA),
 };
 
 static unsigned aux_pcm_gpio_on[] = {
-	PCOM_GPIO_CFG(SAGA_GPIO_BT_PCM_OUT, 1, GPIO_OUTPUT,
-			GPIO_NO_PULL, GPIO_2MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_BT_PCM_IN, 1, GPIO_INPUT,
-			GPIO_NO_PULL, GPIO_2MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_BT_PCM_SYNC, 1, GPIO_OUTPUT,
-			GPIO_NO_PULL, GPIO_2MA),
-	PCOM_GPIO_CFG(SAGA_GPIO_BT_PCM_CLK, 1, GPIO_OUTPUT,
-			GPIO_NO_PULL, GPIO_2MA),
+	GPIO_CFG(SAGA_GPIO_BT_PCM_OUT, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_2MA),
+	GPIO_CFG(SAGA_GPIO_BT_PCM_IN, 1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_2MA),
+	GPIO_CFG(SAGA_GPIO_BT_PCM_SYNC, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_2MA),
+	GPIO_CFG(SAGA_GPIO_BT_PCM_CLK, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_2MA),
 };
+
+static void config_gpio_table(uint32_t *table, int len)
+{
+	int n, rc;
+	for (n = 0; n < len; n++) {
+		rc = gpio_tlmm_config(table[n], GPIO_CFG_ENABLE);
+		if (rc) {
+			pr_err("[CAM] %s: gpio_tlmm_config(%#x)=%d\n",
+				__func__, table[n], rc);
+			break;
+		}
+	}
+}
 
 void saga_snddev_poweramp_on(int en)
 {
 	pr_aud_info("%s %d\n", __func__, en);
 	if (en) {
-		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN), 1);
 		mdelay(30);
+		gpio_request(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN), "AMP_EN");
+		gpio_direction_output(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN), 1);
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode |= BIT_SPEAKER;
 		mdelay(5);
 	} else {
-		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN), 0);
+		gpio_request(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN), "AMP_EN");
+		gpio_direction_output(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN), 0);
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode &= ~BIT_SPEAKER;
 	}
@@ -136,11 +146,13 @@ void saga_snddev_hsed_pamp_on(int en)
 	if (en) {
 		msleep(60);
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_EN), 1);
+		gpio_request(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_EN), "HP_AMP_EN");
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode |= BIT_HEADSET;
 		mdelay(5);
 	} else {
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_EN), 0);
+		gpio_request(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_EN), "HP_AMP_EN");
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode &= ~BIT_HEADSET;
 	}
@@ -157,11 +169,13 @@ void saga_snddev_receiver_pamp_on(int en)
 	pr_aud_info("%s %d\n", __func__, en);
 	if (en) {
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_EP_EN), 1);
+		gpio_request(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_EP_EN), "HP_AMP_EN");
 		mdelay(5);
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode |= BIT_RECEIVER;
 	} else {
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_EP_EN), 0);
+		gpio_request(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_EP_EN), "HP_AMP_EN");
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode &= ~BIT_RECEIVER;
 	}
@@ -237,10 +251,12 @@ void saga_snddev_fmspk_pamp_on(int en)
 	if (en) {
 		msleep(30);
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN), 1);
+		gpio_request(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN), "SPK_AMP_EN");
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode |= BIT_FM_SPK;
 	} else {
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN), 0);
+		gpio_request(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_SPK_EN), "SPK_AMP_EN");
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode &= ~BIT_FM_SPK;
 	}
@@ -250,11 +266,13 @@ void saga_snddev_fmhs_pamp_on(int en)
 {
 	if (en) {
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_EN), 1);
+		gpio_request(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_EN), "HP_AMP_EN");
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode |= BIT_FM_HS;
 		mdelay(5);
 	} else {
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_EN), 0);
+		gpio_request(PM8058_GPIO_PM_TO_SYS(SAGA_AUD_HP_EN), "HP_AMP_EN");
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode &= ~BIT_FM_HS;
 	}
@@ -391,14 +409,12 @@ void __init saga_audio_init(void)
 
 	mutex_init(&bt_sco_lock);
 
-#ifdef CONFIG_MSM7KV2_AUDIO
 	htc_7x30_register_analog_ops(&ops);
 	htc_7x30_register_icodec_ops(&iops);
 	htc_7x30_register_ecodec_ops(&eops);
 	htc_7x30_register_voice_ops(&vops);
 	acoustic_register_ops(&acoustic);
 	acdb_register_ops(&acdb);
-#endif
 	aic3254_register_ctl_ops(&cops);
 
 	/* Init PMIC GPIO */
