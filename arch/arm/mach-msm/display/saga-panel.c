@@ -26,16 +26,16 @@
 
 #include <asm/io.h>
 #include <asm/mach-types.h>
-#include <mach/msm_fb.h>
+#include <mach/msm_fb-7x30.h>
 #include <mach/msm_iomap.h>
 #include <mach/vreg.h>
 #include <mach/msm_panel.h>
 #include <mach/panel_id.h>
 
 
-#include "board-saga.h"
-#include "devices.h"
-#include "proc_comm.h"
+#include "../board-saga.h"
+#include "../devices.h"
+#include "../proc_comm.h"
 
 #if 1
 #define B(s...) printk(s)
@@ -312,8 +312,6 @@ static int panel_sony_power(int on)
 
 static struct resource resources_msm_fb[] = {
 	{
-		.start = MSM_FB_BASE,
-		.end = MSM_FB_BASE + MSM_FB_SIZE - 1,
 		.flags = IORESOURCE_MEM,
 	},
 };
@@ -435,6 +433,7 @@ saga_backlight_switch(struct msm_mddi_client_data *client_data, int on)
 		do_renesas_cmd(client_data, saga_renesas_backlight_blank_cmd, ARRAY_SIZE(saga_renesas_backlight_blank_cmd));
 		saga_set_brightness(&renesas.lcd_backlight, 0);
 		clear_bit(GATE_ON, &renesas.status);
+		renesas.last_shrink_br = 0;
 	}
 }
 
@@ -552,7 +551,7 @@ mddi_hitachi_power(struct msm_mddi_client_data *client_data, int on)
 static void
 panel_renesas_fixup(uint16_t *mfr_name, uint16_t *product_code)
 {
-	printk("mddi fixup\n");
+	printk(KERN_DEBUG"mddi fixup\n");
 	*mfr_name = 0xb9f6;
 	*product_code = 0x1408;
 }
@@ -584,6 +583,13 @@ static struct platform_driver saga_backlight_driver = {
 static struct msm_mdp_platform_data mdp_pdata_hitachi = {
 	//.overrides = MSM_MDP_PANEL_FLIP_UD | MSM_MDP_PANEL_FLIP_LR,
 	.overrides = MSM_MDP4_MDDI_DMA_SWITCH,
+#ifdef CONFIG_MDP4_HW_VSYNC
+	.xres = 480,
+	.yres = 800,
+	.back_porch = 4,
+	.front_porch = 2,
+	.pulse_width = 4,
+#endif
 };
 
 int __init saga_init_panel(void)
@@ -633,6 +639,10 @@ int __init saga_init_panel(void)
 				__func__, rc);
 			return -1;
 		}
+
+		resources_msm_fb[0].start = MSM_FB_BASE,
+		resources_msm_fb[0].end = MSM_FB_BASE + MSM_FB_SIZE - 1,
+
 		msm_device_mdp.dev.platform_data = &mdp_pdata_hitachi;
 		rc = platform_device_register(&msm_device_mdp);
 		if (rc)
