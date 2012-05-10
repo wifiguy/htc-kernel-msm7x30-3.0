@@ -37,9 +37,6 @@
 
 #define SAGA_SDMC_CD_N_SYS	PM8058_GPIO_PM_TO_SYS(SAGA_SDMC_CD_N)
 
-extern int msm_add_sdcc(unsigned int controller, struct mmc_platform_data *plat,
-			unsigned int stat_irq, unsigned long stat_irq_flags);
-
 /* ---- SDCARD ---- */
 
 static uint32_t sdcard_on_gpio_table[] = {
@@ -162,12 +159,14 @@ static struct mmc_platform_data saga_sdslot_data = {
 	.dat0_gpio	= 69,
 };
 
+#if 0
 static unsigned int saga_emmcslot_type = MMC_TYPE_MMC;
 static struct mmc_platform_data saga_movinand_data = {
 	.ocr_mask	= SAGA_MMC_VDD,
 	.slot_type	= &saga_emmcslot_type,
 	.mmc_bus_width  = MMC_CAP_8_BIT_DATA,
 };
+#endif
 
 /* ---- WIFI ---- */
 
@@ -190,6 +189,19 @@ static uint32_t wifi_off_gpio_table[] = {
 	PCOM_GPIO_CFG(110, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_4MA), /* CLK */
 	PCOM_GPIO_CFG(147, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_4MA), /* WLAN IRQ */
 };
+
+static void config_gpio_table(uint32_t *table, int len)
+{
+	int n, rc;
+	for (n = 0; n < len; n++) {
+		rc = gpio_tlmm_config(table[n], GPIO_CFG_ENABLE);
+		if (rc) {
+			pr_err("%s: gpio_tlmm_config(%#x)=%d\n",
+				__func__, table[n], rc);
+			break;
+		}
+	}
+}
 
 /* BCM4329 returns wrong sdio_vsn(1) when we read cccr,
  * we use predefined value (sdio_vsn=2) here to initial sdio driver well
@@ -231,6 +243,11 @@ static struct mmc_platform_data saga_wifi_data = {
 	.status			= saga_wifi_status,
 	.register_status_notify	= saga_wifi_status_register,
 	.embedded_sdio		= &saga_wifi_emb_data,
+	.mmc_bus_width		= MMC_CAP_4_BIT_DATA,
+	.msmsdcc_fmin		= 144000,
+	.msmsdcc_fmid		= 24576000,
+	.msmsdcc_fmax		= 49152000,
+	.nonremovable		= 0,
 };
 
 int saga_wifi_set_carddetect(int val)
@@ -361,15 +378,16 @@ int __init saga_init_mmc(unsigned int sys_rev)
 	register_msm_irq_mask(INT_SDC2_1);
 	config_gpio_table(movinand_on_gpio_table,
 			  ARRAY_SIZE(movinand_on_gpio_table));
-	msm_add_sdcc(2, &saga_movinand_data, 0, 0);
-
+#if 0
+	msm_add_sdcc(2, &saga_movinand_data);
+#endif
 	/* initial WIFI_SHUTDOWN# */
 	id = PCOM_GPIO_CFG(SAGA_GPIO_WIFI_SHUTDOWN_N, 0, GPIO_OUTPUT,
 		GPIO_NO_PULL, GPIO_2MA),
 	msm_proc_comm(PCOM_RPC_GPIO_TLMM_CONFIG_EX, &id, 0);
 	gpio_set_value(SAGA_GPIO_WIFI_SHUTDOWN_N, 0);
 
-	msm_add_sdcc(3, &saga_wifi_data, 0, 0);
+	msm_add_sdcc(3, &saga_wifi_data);
 
 	register_msm_irq_mask(INT_SDC4_0);
 	register_msm_irq_mask(INT_SDC4_1);
