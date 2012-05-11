@@ -43,6 +43,34 @@ static struct gpio_event_direct_entry glacier_keypad_input_map[] = {
 		.gpio = PM8058_GPIO_PM_TO_SYS(GLACIER_VOL_DN),
 		.code = KEY_VOLUMEDOWN,
 	},
+	{
+		.gpio = PM8058_GPIO_PM_TO_SYS(GLACIER_OJ_ACTION),
+		.code = BTN_MOUSE,
+	},
+	{
+		.gpio = PM8058_GPIO_PM_TO_SYS(GLACIER_HOME_KEY),
+		.code = KEY_HOME,
+	},
+	{
+		.gpio = PM8058_GPIO_PM_TO_SYS(GLACIER_MENU_KEY),
+		.code = KEY_MENU,
+	},
+	{
+		.gpio = PM8058_GPIO_PM_TO_SYS(GLACIER_BACK_KEY),
+		.code = KEY_BACK,
+	},
+	{
+		.gpio = PM8058_GPIO_PM_TO_SYS(GLACIER_SEND_KEY),
+		.code = KEY_F13,/*Genius/voice command key*/
+	},
+	{
+		.gpio = PM8058_GPIO_PM_TO_SYS(GLACIER_CAM_STEP2),
+		.code = KEY_CAMERA,
+	},
+	{
+		.gpio = PM8058_GPIO_PM_TO_SYS(GLACIER_CAM_STEP1),
+		.code = KEY_HP,
+	},
 };
 
 uint32_t inputs_gpio_table[] = {
@@ -99,7 +127,7 @@ static struct keyreset_platform_data glacier_reset_keys_pdata = {
 	.keys_down = {
 		KEY_POWER,
 		KEY_VOLUMEDOWN,
-		KEY_VOLUMEUP,
+		BTN_MOUSE,
 		0
 	},
 };
