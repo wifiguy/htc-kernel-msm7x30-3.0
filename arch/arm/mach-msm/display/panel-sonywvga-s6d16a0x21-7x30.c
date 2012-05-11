@@ -24,7 +24,7 @@
 #include <linux/leds.h>
 #include <asm/io.h>
 #include <asm/mach-types.h>
-#include <mach/msm_fb.h>
+#include <mach/msm_fb-7x30.h>
 #include <linux/gpio.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_panel.h>
@@ -32,7 +32,7 @@
 #include <mach/vreg.h>
 #include <linux/spi/spi.h>
 #include <mach/atmega_microp.h>
-#include "devices.h"
+#include "../devices.h"
 
 //#define DEBUG_LCM
 #ifdef DEBUG_LCM
@@ -475,7 +475,7 @@ static int __init sonywvga_init_panel(void)
 	if(is_sony_RGB666())
 		msm_device_mdp.dev.platform_data = &mdp_pdata;
 
-	ret = platform_device_register(&msm_device_mdp);
+	ret = platform_device_register(&mdp_device);
 	if (ret)
 		return ret;
 

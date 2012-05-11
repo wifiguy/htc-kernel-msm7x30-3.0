@@ -24,13 +24,13 @@
 #include <linux/leds.h>
 #include <asm/io.h>
 #include <asm/mach-types.h>
-#include <mach/msm_fb.h>
+#include <mach/msm_fb-7x30.h>
 #include <linux/gpio.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_panel.h>
 #include <linux/spi/spi.h>
 
-#include "devices.h"
+#include "../devices.h"
 
 #define DEBUG_LCM
 #ifdef DEBUG_LCM
@@ -600,7 +600,7 @@ static int __init amoled_init_panel(void)
 
 	printk(KERN_DEBUG "%s\n", __func__);
 
-	ret = platform_device_register(&msm_device_mdp);
+	ret = platform_device_register(&mdp_device);
 	if (ret)
 		return ret;
 

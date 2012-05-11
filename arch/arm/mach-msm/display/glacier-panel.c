@@ -31,9 +31,9 @@
 #include <mach/vreg.h>
 
 
-#include "board-glacier.h"
-#include "devices.h"
-#include "proc_comm.h"
+#include "../board-glacier.h"
+#include "../devices.h"
+#include "../proc_comm.h"
 
 #if 1
 #define B(s...) printk(s)
@@ -206,8 +206,6 @@ err_register_lcd_bl:
 
 static struct resource resources_msm_fb[] = {
 	{
-		.start = MSM_FB_BASE,
-		.end = MSM_FB_BASE + MSM_FB_SIZE - 1,
 		.flags = IORESOURCE_MEM,
 	},
 };
@@ -786,12 +784,15 @@ int __init glacier_init_panel(void)
 		return rc;
 	}
 
+	resources_msm_fb[0].start = MSM_FB_BASE,
+	resources_msm_fb[0].end = MSM_FB_BASE + MSM_FB_SIZE - 1,
+
 	if (panel_type == PANEL_SHARP)
 		msm_device_mdp.dev.platform_data = &mdp_pdata_sharp;
 	else
 		msm_device_mdp.dev.platform_data = &mdp_pdata_common;
 
-	rc = platform_device_register(&msm_device_mdp);
+	rc = platform_device_register(&mdp_device);
 	if (rc)
 		return rc;
 
