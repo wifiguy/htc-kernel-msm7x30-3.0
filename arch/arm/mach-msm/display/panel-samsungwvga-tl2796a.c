@@ -600,7 +600,7 @@ static int __init amoled_init_panel(void)
 
 	printk(KERN_DEBUG "%s\n", __func__);
 
-	ret = platform_device_register(&mdp_device);
+	ret = platform_device_register(&msm_device_mdp);
 	if (ret)
 		return ret;
 

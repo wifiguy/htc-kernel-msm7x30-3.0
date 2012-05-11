@@ -475,7 +475,7 @@ static int __init sonywvga_init_panel(void)
 	if(is_sony_RGB666())
 		msm_device_mdp.dev.platform_data = &mdp_pdata;
 
-	ret = platform_device_register(&mdp_device);
+	ret = platform_device_register(&msm_device_mdp);
 	if (ret)
 		return ret;
 

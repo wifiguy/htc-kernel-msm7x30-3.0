@@ -20,10 +20,10 @@
 #include <mach/gpio.h>
 #include <mach/dal.h>
 #include "board-glacier.h"
-#include <mach/qdsp5v2_1x/snddev_icodec.h>
-#include <mach/qdsp5v2_1x/snddev_ecodec.h>
-#include <mach/qdsp5v2_1x/audio_def.h>
-#include <mach/qdsp5v2_1x/voice.h>
+#include <mach/qdsp5v2_2x/snddev_icodec.h>
+#include <mach/qdsp5v2_2x/snddev_ecodec.h>
+#include <mach/qdsp5v2_2x/audio_def.h>
+#include <mach/qdsp5v2_2x/voice.h>
 #include <mach/htc_acoustic_7x30.h>
 #include <linux/delay.h>
 
@@ -89,29 +89,35 @@ static struct q5v2_hw_info_percentage q5v2_audio_hw[Q5V2_HW_COUNT] = {
 };
 
 static unsigned aux_pcm_gpio_on[] = {
-	PCOM_GPIO_CFG(GLACIER_GPIO_BT_PCM_OUT, 1, GPIO_OUTPUT,
-			GPIO_NO_PULL, GPIO_2MA),
-	PCOM_GPIO_CFG(GLACIER_GPIO_BT_PCM_IN, 1, GPIO_INPUT,
-			GPIO_NO_PULL, GPIO_2MA),
-	PCOM_GPIO_CFG(GLACIER_GPIO_BT_PCM_SYNC, 1, GPIO_OUTPUT,
-			GPIO_NO_PULL, GPIO_2MA),
-	PCOM_GPIO_CFG(GLACIER_GPIO_BT_PCM_CLK, 1, GPIO_OUTPUT,
-			GPIO_NO_PULL, GPIO_2MA),
+	GPIO_CFG(GLACIER_GPIO_BT_PCM_OUT, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA),
+	GPIO_CFG(GLACIER_GPIO_BT_PCM_IN, 1, GPIO_INPUT, GPIO_NO_PULL, GPIO_2MA),
+	GPIO_CFG(GLACIER_GPIO_BT_PCM_SYNC, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA),
+	GPIO_CFG(GLACIER_GPIO_BT_PCM_CLK, 1, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_2MA),
 };
 
 static unsigned aux_pcm_gpio_off[] = {
-	PCOM_GPIO_CFG(GLACIER_GPIO_BT_PCM_OUT, 0, GPIO_OUTPUT,
-			GPIO_PULL_DOWN, GPIO_2MA),
-	PCOM_GPIO_CFG(GLACIER_GPIO_BT_PCM_IN, 0, GPIO_INPUT,
-			GPIO_NO_PULL, GPIO_2MA),
-	PCOM_GPIO_CFG(GLACIER_GPIO_BT_PCM_SYNC, 0, GPIO_OUTPUT,
-			GPIO_PULL_DOWN, GPIO_2MA),
-	PCOM_GPIO_CFG(GLACIER_GPIO_BT_PCM_CLK, 0, GPIO_OUTPUT,
-			GPIO_PULL_DOWN, GPIO_2MA),
+	GPIO_CFG(GLACIER_GPIO_BT_PCM_OUT, 0, GPIO_OUTPUT, GPIO_PULL_DOWN, GPIO_2MA),
+	GPIO_CFG(GLACIER_GPIO_BT_PCM_IN, 0, GPIO_INPUT, GPIO_NO_PULL, GPIO_2MA),
+	GPIO_CFG(GLACIER_GPIO_BT_PCM_SYNC, 0, GPIO_OUTPUT, GPIO_PULL_DOWN, GPIO_2MA),
+	GPIO_CFG(GLACIER_GPIO_BT_PCM_CLK, 0, GPIO_OUTPUT, GPIO_PULL_DOWN, GPIO_2MA),
 };
+
+static void config_gpio_table(uint32_t *table, int len)
+{
+	int n, rc;
+	for (n = 0; n < len; n++) {
+		rc = gpio_tlmm_config(table[n], GPIO_CFG_ENABLE);
+		if (rc) {
+			pr_err("[CAM] %s: gpio_tlmm_config(%#x)=%d\n",
+				__func__, table[n], rc);
+			break;
+		}
+	}
+}
 
 void glacier_snddev_poweramp_on(int en)
 {
+	pr_aud_info("%s %d\n", __func__, en);
 	if (en) 
 		mdelay(30);
 	gpio_set_value(PM8058_GPIO_PM_TO_SYS(GLACIER_AUD_SPK_ENO), en);
@@ -288,12 +294,11 @@ void __init glacier_audio_init(void)
 	};
 
 	mutex_init(&bt_sco_lock);
-#ifdef CONFIG_MSM7KV2_1X_AUDIO
 	htc_7x30_register_analog_ops(&ops);
 	htc_7x30_register_ecodec_ops(&eops);
 	htc_7x30_register_voice_ops(&vops);
 	acoustic_register_ops(&acoustic);
-#endif
+
 	pm8058_gpio_config(GLACIER_AUD_SPK_ENO, &audio_pwr);
 	pm8058_gpio_config(GLACIER_AUD_HP_EN, &audio_pwr);
 

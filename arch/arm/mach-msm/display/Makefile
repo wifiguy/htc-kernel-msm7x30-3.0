@@ -7,4 +7,4 @@ obj-$(CONFIG_MACH_RIDER) += rider-panel.o
 obj-$(CONFIG_MACH_HOLIDAY) += holiday-panel.o
 obj-$(CONFIG_MACH_VIGOR) += vigor-panel.o
 obj-$(CONFIG_MACH_RUBY) += ruby-panel.o
-obj-$(CONFIG_MACH_GLACIER) += panel-samsungwvga-s6e63m0.o panel-samsungwvga-tl2796a.o panel-sonywvga-s6d16a0x21-7x30.o
+# obj-$(CONFIG_MACH_GLACIER) += panel-samsungwvga-s6e63m0.o panel-samsungwvga-tl2796a.o panel-sonywvga-s6d16a0x21-7x30.o
