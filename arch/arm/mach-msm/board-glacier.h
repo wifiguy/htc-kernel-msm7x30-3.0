@@ -118,27 +118,28 @@
 #define GLACIER_GPIO_FLASHLIGHT_TORCH	129
 
 /* BT */
-#define GLACIER_GPIO_BT_UART1_RTS      (134)
-#define GLACIER_GPIO_BT_UART1_CTS      (135)
-#define GLACIER_GPIO_BT_UART1_RX       (136)
-#define GLACIER_GPIO_BT_UART1_TX       (137)
-#define GLACIER_GPIO_BT_PCM_OUT        (138)
-#define GLACIER_GPIO_BT_PCM_IN         (139)
-#define GLACIER_GPIO_BT_PCM_SYNC       (140)
-#define GLACIER_GPIO_BT_PCM_CLK        (141)
-#define GLACIER_GPIO_BT_RESET_N        (41)
-#define GLACIER_GPIO_BT_HOST_WAKE      (44)
-#define GLACIER_GPIO_BT_CHIP_WAKE      (50)
-#define GLACIER_GPIO_BT_SHUTDOWN_N     (38)
+#define GLACIER_GPIO_BT_UART1_RTS      	(134)
+#define GLACIER_GPIO_BT_UART1_CTS      	(135)
+#define GLACIER_GPIO_BT_UART1_RX       	(136)
+#define GLACIER_GPIO_BT_UART1_TX       	(137)
+#define GLACIER_GPIO_BT_PCM_OUT        	(138)
+#define GLACIER_GPIO_BT_PCM_IN         	(139)
+#define GLACIER_GPIO_BT_PCM_SYNC	(140)
+#define GLACIER_GPIO_BT_PCM_CLK		(141)
+#define GLACIER_GPIO_BT_RESET_N		(41)
+#define GLACIER_GPIO_BT_HOST_WAKE	(44)
+#define GLACIER_GPIO_BT_CHIP_WAKE	(50)
+#define GLACIER_GPIO_BT_SHUTDOWN_N	(38)
 
-#define GLACIER_GPIO_USB_ID_PIN			(145)
-#define GLACIER_GPIO_DOCK_PIN			(37)
+/* USB */
+#define GLACIER_GPIO_USB_ID_PIN		(145)
+#define GLACIER_GPIO_DOCK_PIN		(37)
 
-#define GLACIER_CAM_PWD                (34)
-#define GLACIER_CAM_RST                (31)
-#define GLACIER_CLK_SWITCH             (23) /* camera select pin */
-#define GLACIER_CAM2_PWD			   (24)
-#define GLACIER_CAM2_RST			   (21)
+#define GLACIER_CAM_PWD                	(34)
+#define GLACIER_CAM_RST                	(31)
+#define GLACIER_CLK_SWITCH      	(23) /* camera select pin */
+#define GLACIER_CAM2_PWD		(24)
+#define GLACIER_CAM2_RST		(21)
 
 #define GLACIER_OJ_RSTz                (36)
 #define GLACIER_OJ_MOTION              (26)
@@ -165,16 +166,20 @@
 #define GLACIER_VOL_UP			PMGPIO(24)
 #define GLACIER_VOL_DN			PMGPIO(25)
 #define GLACIER_AUD_HP_DETz		PMGPIO(26)
-#define GLACIER_CAM_A2V85_EN    PMGPIO(33)/* ANALOG POWER of Glacier*/
+#define GLACIER_CAM_A2V85_EN   		PMGPIO(33)/* ANALOG POWER of Glacier*/
 #define GLACIER_CAM_STEP2		PMGPIO(35)
 #define GLACIER_CAM_STEP1		PMGPIO(36)
 #define GLACIER_WFM_ANT_SW		PMGPIO(37)
 #define GLACIER_SLEEP_CLK2		PMGPIO(39)
 
+#ifdef CONFIG_MICROP_COMMON
+void __init glacier_microp_init(void);
+#endif
+
 unsigned int glacier_get_engineerid(void);
 int glacier_init_mmc(unsigned int sys_rev);
 void __init glacier_audio_init(void);
-int glacier_init_keypad(void);
+int __init glacier_init_keypad(void);
 int __init glacier_wifi_init(void);
 int __init glacier_init_panel(void);
 #endif /* __ARCH_ARM_MACH_MSM_BOARD_GLACIER_H */

@@ -80,11 +80,7 @@
 #include "pm.h"
 #include "socinfo.h"
 #ifdef CONFIG_MSM_SSBI
-#include <mach/msm_ssbi.h>
-#endif
-
-#ifdef CONFIG_MICROP_COMMON
-void __init glacier_microp_init(void);
+#include <linux/msm_ssbi.h>
 #endif
 
 static uint opt_disable_uart2;
