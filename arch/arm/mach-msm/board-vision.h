@@ -159,6 +159,11 @@
 #define VISION_SLEEP_CLK2		PMGPIO(39)
 #define VISION_DQ_PWRDNz		PMGPIO(40)
 
+#ifdef CONFIG_MICROP_COMMON
+
+void __init vision_microp_init(void);
+
+#endif
 
 unsigned int vision_get_engineerid(void);
 

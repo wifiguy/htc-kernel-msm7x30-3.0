@@ -26,23 +26,22 @@
 #include <linux/mfd/pmic8058.h>
 #include <linux/mfd/marimba.h>
 #include <linux/i2c.h>
-#include <linux/i2c-msm.h>
 #include <linux/a1026.h>
 #include <linux/spi/spi.h>
-#include <mach/qdsp5v2/msm_lpa.h>
+#include <mach/qdsp5v2_2x/msm_lpa.h>
 #include <linux/akm8975.h>
 #include <linux/bma150.h>
 #include <linux/capella_cm3602.h>
 #include <linux/atmel_qt602240.h>
 #include <linux/curcial_oj.h>
 #include <linux/leds-pm8058.h>
-#include <linux/input/pmic8058-keypad.h>
+#include <linux/input/pmic8xxx-keypad.h>
 #include <linux/proc_fs.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 #include <asm/setup.h>
-#include <mach/msm_flashlight.h>
+#include <linux/htc_flashlight.h>
 
 #include <mach/system.h>
 #include <mach/gpio.h>
@@ -61,7 +60,6 @@
 #include <mach/dma.h>
 #include <mach/msm_iomap.h>
 #include <mach/perflock.h>
-#include <mach/msm_serial_debugger.h>
 #include <mach/rpc_pmapp.h>
 #include <mach/remote_spinlock.h>
 #include <mach/msm_panel.h>
@@ -79,14 +77,8 @@
 #include "smd_private.h"
 #include "spm.h"
 #include "pm.h"
-#include "socinfo.h"
-#include "gpio_chip.h"
 #ifdef CONFIG_MSM_SSBI
-#include <mach/msm_ssbi.h>
-#endif
-
-#ifdef CONFIG_MICROP_COMMON
-void __init vision_microp_init(void);
+#include <linux/msm_ssbi_7x30.h>
 #endif
 
 #define SAMSUNG_PANEL           0
@@ -112,16 +104,31 @@ static uint32_t usb_ID_PIN_ouput_table[] = {
 	PCOM_GPIO_CFG(VISION_GPIO_USB_ID_PIN, 0, GPIO_OUTPUT, GPIO_NO_PULL, GPIO_4MA),
 };
 
+static void config_gpio_table(uint32_t *table, int len)
+{
+        int n, rc;
+        for (n = 0; n < len; n++) {
+                rc = gpio_tlmm_config(table[n], GPIO_CFG_ENABLE);
+                if (rc) {
+                        pr_err("[CAM] %s: gpio_tlmm_config(%#x)=%d\n",
+                                __func__, table[n], rc);
+                        break;
+                }
+        }
+}
+
 void config_vision_usb_id_gpios(bool output)
 {
-	if (output) {
-		config_gpio_table(usb_ID_PIN_ouput_table,
-			ARRAY_SIZE(usb_ID_PIN_ouput_table));
-		gpio_set_value(VISION_GPIO_USB_ID_PIN, 1);
-	} else
-		config_gpio_table(usb_ID_PIN_input_table,
-			ARRAY_SIZE(usb_ID_PIN_input_table));
+        if (output) {
+                config_gpio_table(usb_ID_PIN_ouput_table, ARRAY_SIZE(usb_ID_PIN_ouput_table));
+                gpio_set_value(VISION_GPIO_USB_ID_PIN, 1);
+                printk(KERN_INFO "%s %d output high\n",  __func__, VISION_GPIO_USB_ID_PIN);
+        } else {
+                config_gpio_table(usb_ID_PIN_input_table, ARRAY_SIZE(usb_ID_PIN_input_table));
+                printk(KERN_INFO "%s %d input none pull\n",  __func__, VISION_GPIO_USB_ID_PIN);
+        }
 }
+
 #ifdef CONFIG_USB_ANDROID
 static int phy_init_seq[] = { 0x06, 0x36, 0x0C, 0x31, 0x31, 0x32, 0x1, 0x0D, 0x1, 0x10, -1 };
 
@@ -1360,6 +1367,7 @@ static void __init audience_gpio_init(void)
 	pr_info("Configure audio codec gpio for devices without audience.\n");
 }
 }
+
 
 #endif /* CONFIG_MSM7KV2_1X_AUDIO */
 

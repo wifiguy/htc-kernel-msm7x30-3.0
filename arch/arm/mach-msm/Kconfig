@@ -552,6 +552,13 @@ config MACH_PRIMOTD
        help
          Support for the Qualcomm Primotd board.
 
+config MACH_VISION
+       depends on ARCH_MSM7X30
+       default n
+       bool "Vision"
+       help
+         Support for the Qualcomm Saga board.
+
 config MACH_VIVOW_EVM
        depends on ARCH_MSM7X30
        default n
