@@ -27,7 +27,9 @@
 #include <linux/mfd/marimba.h>
 #include <linux/i2c.h>
 #include <linux/a1026.h>
+#ifdef CONFIG_SPI_QSD
 #include <linux/spi/spi.h>
+#endif
 #include <mach/qdsp5v2_2x/msm_lpa.h>
 #include <linux/akm8975.h>
 #include <linux/bma150.h>

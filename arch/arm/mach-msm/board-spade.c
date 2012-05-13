@@ -25,7 +25,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c-msm.h>
 #include <linux/spi/spi.h>
-#include <mach/qdsp5v2/msm_lpa.h>
+#include <mach/qdsp5v2_2x/msm_lpa.h>
 #include <linux/akm8975.h>
 #include <linux/bma150.h>
 #include <linux/isl29028.h>
@@ -39,7 +39,7 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
 #include <asm/setup.h>
-#include <mach/msm_flashlight.h>
+#include <linux/htc_flashlight.h>
 
 #include <mach/system.h>
 #include <mach/gpio.h>
@@ -55,7 +55,6 @@
 #include <mach/dma.h>
 #include <mach/msm_iomap.h>
 #include <mach/perflock.h>
-#include <mach/msm_serial_debugger.h>
 #include <mach/rpc_pmapp.h>
 #include <mach/remote_spinlock.h>
 #include <mach/msm_panel.h>
@@ -2130,12 +2129,6 @@ static void __init spade_init(void)
 
 	/* for bcm */
 	bt_export_bd_address();
-
-#if defined(CONFIG_MSM_SERIAL_DEBUGGER)
-	if (!opt_disable_uart2)
-		msm_serial_debug_init(MSM_UART2_PHYS, INT_UART2,
-		&msm_device_uart2.dev, 23, MSM_GPIO_TO_INT(SPADE_GPIO_UART2_RX));
-#endif
 
 #ifdef CONFIG_SERIAL_MSM_HS
 	msm_device_uart_dm1.dev.platform_data = &msm_uart_dm1_pdata;

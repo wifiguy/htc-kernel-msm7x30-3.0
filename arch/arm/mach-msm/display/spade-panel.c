@@ -13,8 +13,6 @@
  *
  */
 
-#include <asm/io.h>
-#include <asm/mach-types.h>
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/gpio.h>
@@ -24,15 +22,18 @@
 #include <linux/kernel.h>
 #include <linux/spi/spi.h>
 #include <linux/platform_device.h>
-#include <mach/vreg.h>
-#include <mach/msm_fb.h>
-#include <mach/msm_iomap.h>
-#include <mach/atmega_microp.h>
-#include <mach/panel_id.h>
 
-#include "board-spade.h"
-#include "devices.h"
-#include "proc_comm.h"
+#include <asm/io.h>
+#include <asm/mach-types.h>
+#include <mach/msm_fb-7x30.h>
+#include <mach/msm_iomap.h>
+#include <mach/vreg.h>
+#include <mach/panel_id.h>
+#include <mach/atmega_microp.h>
+
+#include "../board-spade.h"
+#include "../devices.h"
+#include "../proc_comm.h"
 #include "../../../drivers/video/msm/mdp_hw.h"
 
 #define DEBUG_LCM
